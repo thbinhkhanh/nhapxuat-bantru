@@ -112,8 +112,6 @@ function AppContent() {
         </Toolbar>
       </AppBar>
 
-
-
       <Modal
         open={openLogo}
         onClose={() => setOpenLogo(false)}
@@ -141,7 +139,7 @@ function AppContent() {
         </Box>
       </Modal>
 
-      <Box sx={{ paddingTop: '64px' }}>
+      <Box sx={{ paddingTop: '44px' }}>
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="/home" element={<Home />} />
