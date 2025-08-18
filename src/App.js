@@ -54,16 +54,18 @@ function AppContent() {
           sx={{
             display: 'flex',
             gap: 1,
-            minHeight: '64px !important',
-            paddingTop: '0px !important',
-            paddingBottom: '0px !important',
+            minHeight: '44px !important', // giống mẫu
+            paddingTop: 0,
+            paddingBottom: 0,
+            overflowX: 'auto',      // cho phép scroll ngang trên mobile
+            whiteSpace: 'nowrap',   // giữ menu trên 1 dòng
           }}
         >
           <Box
             component="img"
             src="/Logo.png"
             alt="Logo"
-            sx={{ height: '40px', marginLeft: -1, cursor: 'pointer' }}
+            sx={{ height: '34px', marginLeft: -2, cursor: 'pointer', flexShrink: 0 }}
             onClick={() => setOpenLogo(true)}
           />
 
@@ -74,28 +76,43 @@ function AppContent() {
               to={item.path}
               sx={{
                 color: 'white',
-                backgroundColor:
-                  location.pathname === item.path ? 'rgba(255,255,255,0.2)' : 'transparent',
-                '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.3)',
-                },
-                padding: '4px 8px',
+                backgroundColor: 'transparent',
+                padding: '4px 12px',
                 minHeight: 'auto',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
                 gap: 0.5,
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                textTransform: 'none',
+                borderRadius: 1,
+                borderBottom: location.pathname === item.path ? '3px solid #fff' : '3px solid transparent', // ✅ highlight giống tab active
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                },
+                transition: 'all 0.2s ease',
               }}
             >
               {item.icon ? item.icon : item.label}
             </Button>
           ))}
 
+
           <Box sx={{ flexGrow: 1 }} />
-          <Typography variant="body2" sx={{ color: 'white', lineHeight: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'white',
+              lineHeight: 1,
+              display: { xs: 'none', sm: 'block' }, // ẩn trên mobile
+            }}
+          >
             Năm học: 2025 - 2026
           </Typography>
         </Toolbar>
       </AppBar>
+
+
 
       <Modal
         open={openLogo}
