@@ -1,25 +1,177 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from 'react';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate
+} from 'react-router-dom';
+import {
+  AppBar,
+  Toolbar,
+  Button,
+  Typography,
+  Box,
+  Modal
+} from '@mui/material';
+import HomeIcon from '@mui/icons-material/Home';
 
-function App() {
+// Import các trang
+import Home from './pages/Home';
+import PhieuXuat from './pages/PhieuXuat';
+import ChiCho from './pages/ChiCho';
+import TienAn from './pages/TienAn';
+import ImportData from './pages/ImportData';
+import ImportDanhMuc from './pages/importDanhMuc';
+import UpdateData from './pages/UpdateData';
+import UpdateType from './pages/UpdateType';
+
+// Import DataProvider
+import { DataProvider } from './context/DataContext';
+import { UpdateTypeProvider, useUpdateType } from './context/UpdateTypeContext'; // ✅ import provider
+
+function AppContent() {
+  const location = useLocation();
+  const [openLogo, setOpenLogo] = useState(false);
+
+  const navItems = [
+    { path: '/home', label: 'Trang chủ', icon: <HomeIcon /> },
+    { path: '/phieuxuat', label: 'Xuất kho' },
+    { path: '/chicho', label: 'Chi chợ' },
+    { path: '/tienan', label: 'Tiền ăn' },
+    { path: '/nhapphieu', label: 'Nhập phiếu' },
+    //{ path: '/danhmuc', label: 'Danh mục' },
+    { path: '/capnhat', label: 'Cập nhật' },
+    { path: '/phanloai', label: 'Phân loại' },
+  ];
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
+    <>
+      <AppBar position="fixed" sx={{ background: '#1976d2' }}>
+        <Toolbar
+          sx={{
+            display: 'flex',
+            gap: 1,
+            minHeight: '64px !important',
+            paddingTop: '0px !important',
+            paddingBottom: '0px !important',
+          }}
         >
-          Learn React
-        </a>
-      </header>
-    </div>
+          <Box
+            component="img"
+            src="/Logo.png"
+            alt="Logo"
+            sx={{ height: '40px', marginLeft: -1, cursor: 'pointer' }}
+            onClick={() => setOpenLogo(true)}
+          />
+
+          {navItems.map((item) => (
+            <Button
+              key={item.path}
+              component={Link}
+              to={item.path}
+              sx={{
+                color: 'white',
+                backgroundColor:
+                  location.pathname === item.path ? 'rgba(255,255,255,0.2)' : 'transparent',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.3)',
+                },
+                padding: '4px 8px',
+                minHeight: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+              }}
+            >
+              {item.icon ? item.icon : item.label}
+            </Button>
+          ))}
+
+          <Box sx={{ flexGrow: 1 }} />
+          <Typography variant="body2" sx={{ color: 'white', lineHeight: 1 }}>
+            Năm học: 2025 - 2026
+          </Typography>
+        </Toolbar>
+      </AppBar>
+
+      <Modal
+        open={openLogo}
+        onClose={() => setOpenLogo(false)}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backdropFilter: 'blur(5px)'
+        }}
+      >
+        <Box sx={{ outline: 'none', bgcolor: 'transparent' }}>
+          <Box
+            component="img"
+            src="/Logo.png"
+            alt="Logo lớn"
+            sx={{
+              maxWidth: '80vw',
+              maxHeight: '80vh',
+              borderRadius: 2,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              cursor: 'pointer',
+            }}
+            onClick={() => setOpenLogo(false)}
+          />
+        </Box>
+      </Modal>
+
+      <Box sx={{ paddingTop: '64px' }}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/phieuxuat" element={<PhieuXuat />} />
+          <Route path="/chicho" element={<ChiCho />} />
+          <Route path="/tienan" element={<TienAn />} />
+
+          <Route
+            path="/nhapphieu"
+            element={<ImportDataWithRedirect />}
+          />
+
+          {/*<Route path="/danhmuc" element={<ImportDanhMuc onBack={() => window.history.back()} />} />*/}
+          <Route path="/capnhat" element={<UpdateData />} />
+          <Route path="/phanloai" element={<UpdateType />} />
+        </Routes>
+      </Box>
+    </>
   );
 }
 
-export default App;
+// Wrapper component để handle redirect sau import
+function ImportDataWithRedirect() {
+  const navigate = useNavigate();
+  const { setUnmatchedItems } = useUpdateType();
+
+  const handleImportFinish = (importedData) => {
+    const unmatched = importedData.filter(item => !item.loai);
+    if (unmatched.length > 0) {
+      setUnmatchedItems(unmatched);
+      navigate('/phanloai');
+    } else {
+      window.history.back();
+    }
+  };
+
+  return <ImportData onBack={() => window.history.back()} onFinish={handleImportFinish} />;
+}
+
+export default function App() {
+  return (
+    <DataProvider>
+      <UpdateTypeProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </UpdateTypeProvider>
+    </DataProvider>
+  );
+}
