@@ -15,10 +15,6 @@ import { doc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { format } from "date-fns";
 import LinearProgress from "@mui/material/LinearProgress";
-import { exportToExcel } from "../utils/exportToExcel";
-
-//import exportPhieuXuatKho from "../utils/exportPhieuXuatKho";
-
 
 export default function PhieuXuat() {
   // Context
@@ -211,7 +207,7 @@ export default function PhieuXuat() {
     }
   };
 
-   return (
+  return (
     <Box sx={{ pt: "20px", pb: 6, px: { xs: 1, sm: 2 }, bgcolor: "#e3f2fd", minHeight: "100vh" }}>
       <Card elevation={8} sx={{ maxWidth: 1100, mx: "auto", borderRadius: 3, overflow: "hidden" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -283,28 +279,6 @@ export default function PhieuXuat() {
               }}
             >
               Cập nhật
-            </Button>
-
-            <Button
-              variant="outlined"
-              color="success"
-              onClick={async () => {
-                console.log("rows:", rows);
-                await exportToExcel({
-                  selectedDate,
-                  soPhieu,
-                  nguoiNhan,
-                  lyDoXuat,
-                  xuatTaiKho,
-                  soLuongHocSinh,
-                  thuKho,
-                  keToan,
-                  hieuTruong,
-                  rows,
-                });
-              }}
-            >
-              Xuất Excel
             </Button>
           </Stack>
           
