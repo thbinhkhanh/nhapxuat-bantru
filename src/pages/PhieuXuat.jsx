@@ -397,22 +397,46 @@ export default function PhieuXuat() {
               }}
             >
               <Typography component="span">Ngày: </Typography>
-              <TextField
-                size="small"
-                value={selectedDate.toLocaleDateString("vi-VN")}
-                variant="standard"
-                sx={textFieldStyle}
-              />
-
-              <Typography component="span">Số: </Typography>
-              <TextField
-                size="small"
-                value={soPhieu}
-                onChange={(e) => setSoPhieu(e.target.value)}
-                variant="standard"
-                sx={textFieldStyle}
-              />
-
+                <TextField
+                  size="small"
+                  value={selectedDate.toLocaleDateString("vi-VN")}
+                  variant="standard"
+                  InputProps={{
+                    readOnly: true,
+                    sx: { fontWeight: 'bold' }  // in đậm nội dung
+                  }}
+                  sx={{
+                    width: 100,
+                    "& .MuiInputBase-root": {
+                      color: "black",
+                    },
+                    "& .MuiInput-underline:before": {
+                      borderBottom: "1px solid transparent",
+                    },
+                    "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
+                      borderBottom: "1px solid #ccc",
+                    },
+                    "& .MuiInput-underline:after": {
+                      borderBottom: "none",
+                    },
+                  }}
+                />
+                <Typography component="span">Số: </Typography>
+                <TextField
+                  size="small"
+                  value={soPhieu}
+                  onChange={(e) => setSoPhieu(e.target.value)}
+                  variant="standard"
+                  InputProps={{
+                    sx: { fontWeight: 'bold' }  // in đậm nội dung
+                  }}
+                  sx={{
+                    width: 100,
+                    "& .MuiInput-underline:before": { borderBottom: "1px solid transparent" },
+                    "& .MuiInput-underline:hover:not(.Mui-disabled):before": { borderBottom: "1px solid #ccc" },
+                    "& .MuiInput-underline:after": { borderBottom: "none" },
+                  }}
+                />
               <Typography component="span">Họ tên người nhận hàng: </Typography>
               <TextField
                 size="small"
@@ -447,11 +471,22 @@ export default function PhieuXuat() {
                 value={soLuongHocSinh}
                 onChange={(e) => setSoLuongHocSinh(Number(e.target.value))}
                 variant="standard"
+                InputProps={{
+                  sx: { fontWeight: 'bold' } // in đậm nội dung
+                }}
                 sx={{
-                  ...textFieldStyle,
+                  width: 100, // độ rộng cố định
                   "& .MuiInputBase-root": {
-                    ...textFieldStyle["& .MuiInputBase-root"],
-                    color: "red",
+                    color: "red", // màu chữ
+                  },
+                  "& .MuiInput-underline:before": {
+                    borderBottom: "1px solid transparent",
+                  },
+                  "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
+                    borderBottom: "1px solid #ccc",
+                  },
+                  "& .MuiInput-underline:after": {
+                    borderBottom: "none",
                   },
                 }}
               />

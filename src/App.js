@@ -91,6 +91,8 @@ function AppContent() {
                   backgroundColor: 'rgba(255,255,255,0.1)',
                 },
                 transition: 'all 0.2s ease',
+                ...(item.icon && { minWidth: 30 }), // 👉 thu nhỏ thêm minWidth cho nút chỉ có icon
+                ...(item.path === '/home' && { ml: 1 }), // ml=2 ≈ 16px; tăng/giảm tùy ý
               }}
             >
               {item.icon ? item.icon : item.label}
