@@ -302,6 +302,12 @@ export default function TienAn() {
                   color="success"
                   sx={{ height: 36 }} // ✅ đồng bộ chiều cao với nút cập nhật
                   onClick={async () => {
+                    // Kiểm tra thiết bị di động
+                    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+                    if (isMobile) {
+                      alert("Chức năng xuất Excel không khả dụng trên điện thoại. Vui lòng sử dụng máy tính để xuất file.");
+                      return;
+                    }
                     console.log("rows:", data); // ✅ log đúng biến
                     await exportPhieuTienAn({
                       selectedDate,

@@ -293,8 +293,15 @@ export default function PhieuXuat() {
               <Tooltip title="Xuất Excel">
                 <IconButton
                   color="success"
-                  sx={{ height: 36 }} // cho đồng bộ chiều cao
+                  sx={{ height: 36 }}
                   onClick={async () => {
+                    // Kiểm tra thiết bị di động
+                    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+                    if (isMobile) {
+                      alert("Chức năng xuất Excel không khả dụng trên điện thoại. Vui lòng sử dụng máy tính để xuất file.");
+                      return;
+                    }
+
                     console.log("rows:", rows);
                     await exportPhieuXuatKho({
                       selectedDate,
@@ -313,6 +320,7 @@ export default function PhieuXuat() {
                   <FileDownloadIcon />
                 </IconButton>
               </Tooltip>
+
             </Box>
           </Stack>
           
@@ -346,7 +354,6 @@ export default function PhieuXuat() {
               </Box>
             )}
           </Box>
-
 
           {loading && (
             <Box sx={{ 

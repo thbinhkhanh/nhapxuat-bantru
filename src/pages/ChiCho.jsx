@@ -239,6 +239,12 @@ export default function ChiCho() {
                 <IconButton
                   color="success"
                   onClick={async () => {
+                    // Kiểm tra thiết bị di động
+                    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+                    if (isMobile) {
+                      alert("Chức năng xuất Excel không khả dụng trên điện thoại. Vui lòng sử dụng máy tính để xuất file.");
+                      return;
+                    }
                     console.log("rows:", data);
                     await exportPhieuChiCho({
                       selectedDate,
