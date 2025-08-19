@@ -280,26 +280,27 @@ export default function TienAn() {
               />
             </LocalizationProvider>
 
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleUpdateChenhLech} // ✅ lưu vào Firestore
-              startIcon={<UpdateIcon />}   // ✅ icon cập nhật
-              sx={{
-                height: 33,
-                px: 2.5,
-                fontWeight: "bold",
-                fontSize: "0.80rem",
-              }}
-            >
-              Cập nhật
-            </Button>
+            <Box display="flex" alignItems="center" gap={1} mt={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleUpdateChenhLech} // ✅ lưu vào Firestore
+                startIcon={<UpdateIcon />}       // ✅ icon cập nhật
+                sx={{
+                  height: 36,
+                  px: 2.5,
+                  fontWeight: "bold",
+                  fontSize: "0.80rem",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Cập nhật
+              </Button>
 
-            {/* Nút xuất Excel cho Phiếu Tiền Ăn */}
-            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
               <Tooltip title="Xuất Excel">
                 <IconButton
                   color="success"
+                  sx={{ height: 36 }} // ✅ đồng bộ chiều cao với nút cập nhật
                   onClick={async () => {
                     console.log("rows:", data); // ✅ log đúng biến
                     await exportPhieuTienAn({
