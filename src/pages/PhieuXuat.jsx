@@ -273,43 +273,47 @@ export default function PhieuXuat() {
               />
             </LocalizationProvider>
 
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSaveInfo}
-              startIcon={<UpdateIcon />}   // ✅ icon cập nhật
-              sx={{
-                height: 33,
-                px: 2.5,
-                fontWeight: "bold",
-                fontSize: "0.80rem",
-              }}
-            >
-              Cập nhật
-            </Button>
+            <Box display="flex" alignItems="center" gap={1}>
+  <Button
+    variant="contained"
+    color="primary"
+    onClick={handleSaveInfo}
+    startIcon={<UpdateIcon />}
+    sx={{
+      height: 36,
+      px: 2,
+      fontWeight: "bold",
+      fontSize: "0.75rem",
+      whiteSpace: "nowrap",
+    }}
+  >
+    CẬP NHẬT
+  </Button>
 
-            <Tooltip title="Xuất Excel">
-              <IconButton
-                color="success"
-                onClick={async () => {
-                  console.log("rows:", rows);
-                  await exportPhieuXuatKho({
-                    selectedDate,
-                    soPhieu,
-                    nguoiNhan,
-                    lyDoXuat,
-                    xuatTaiKho,
-                    soLuongHocSinh,
-                    thuKho,
-                    keToan,
-                    hieuTruong,
-                    rows,
-                  });
-                }}
-              >
-                <FileDownloadIcon />
-              </IconButton>
-            </Tooltip>
+  <Tooltip title="Xuất Excel">
+    <IconButton
+      color="success"
+      sx={{ height: 36 }} // cho đồng bộ chiều cao
+      onClick={async () => {
+        console.log("rows:", rows);
+        await exportPhieuXuatKho({
+          selectedDate,
+          soPhieu,
+          nguoiNhan,
+          lyDoXuat,
+          xuatTaiKho,
+          soLuongHocSinh,
+          thuKho,
+          keToan,
+          hieuTruong,
+          rows,
+        });
+      }}
+    >
+      <FileDownloadIcon />
+    </IconButton>
+  </Tooltip>
+</Box>
 
 
 
