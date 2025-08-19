@@ -11,6 +11,12 @@ import { db } from "../firebase";
 import { getStoredDate, setStoredDate } from "../utils/dateStorage"; // dùng dateStorage
 import { useDataContext, useSaveDataToContext } from "../context/DataContext";
 import LinearProgress from '@mui/material/LinearProgress';
+import { exportPhieuChiCho } from "../utils/exportPhieuChiCho";
+
+
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import { Tooltip, IconButton } from "@mui/material";
+
 
 export default function ChiCho() {
   const [data, setData] = useState([]);
@@ -226,6 +232,25 @@ export default function ChiCho() {
                 }}
               />
             </LocalizationProvider>
+
+            {/* Nút xuất Excel */}
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+              <Tooltip title="Xuất Excel">
+                <IconButton
+                  color="success"
+                  onClick={async () => {
+                    console.log("rows:", data);
+                    await exportPhieuChiCho({
+                      selectedDate,
+                      rows: data,
+                      tongCong,
+                    });
+                  }}
+                >
+                  <FileDownloadIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Stack>
 
           {loading && (

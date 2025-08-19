@@ -3,7 +3,7 @@ import { saveAs } from "file-saver";
 import { format } from "date-fns";
 import { numberToVietnameseText } from "./numberToText";
 
-export async function exportToExcel({
+export async function exportPhieuXuatKho({
   selectedDate,
   soPhieu,
   nguoiNhan,
@@ -180,7 +180,7 @@ export async function exportToExcel({
   });
 
   // XUẤT FILE
-  const filename = `phieu_xuat_kho_${format(selectedDate, "yyyyMMdd")}.xlsx`;
+  const filename = `Phieu_Xuat_Kho_${format(selectedDate, "yyyyMMdd")}.xlsx`;
   const buffer = await workbook.xlsx.writeBuffer();
   saveAs(new Blob([buffer]), filename);
 }

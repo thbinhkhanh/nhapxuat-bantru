@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Card, CardContent, Stack, Button, TextField, Divider
+  TableHead, TableRow, Paper, Card, CardContent, Stack, Button,
+  TextField, Divider, LinearProgress, IconButton, Tooltip
 } from "@mui/material";
 
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
@@ -10,14 +11,15 @@ import viLocale from "date-fns/locale/vi";
 
 import { numberToVietnameseText } from "../utils/numberToText";
 import { getStoredDate, setStoredDate } from "../utils/dateStorage";
-import { useDataContext, useSaveDataToContext } from "../context/DataContext"; // ✅ context
+import { useDataContext, useSaveDataToContext } from "../context/DataContext"; 
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { format } from "date-fns";
-import LinearProgress from "@mui/material/LinearProgress";
-import { exportToExcel } from "../utils/exportToExcel";
+import { exportPhieuXuatKho } from "../utils/exportPhieuXuatKho";
 
-//import exportPhieuXuatKho from "../utils/exportPhieuXuatKho";
+import UpdateIcon from "@mui/icons-material/Update";         // ✅ icon cập nhật
+import FileDownloadIcon from "@mui/icons-material/FileDownload"; // ✅ icon excel/download
+
 
 
 export default function PhieuXuat() {
@@ -274,38 +276,43 @@ export default function PhieuXuat() {
             <Button
               variant="contained"
               color="primary"
-              onClick={handleSaveInfo} // ✅ lưu vào Firestore
+              onClick={handleSaveInfo}
+              startIcon={<UpdateIcon />}   // ✅ icon cập nhật
               sx={{
                 height: 33,
                 px: 2.5,
-                fontWeight: 'bold',
-                fontSize: '0.80rem'
+                fontWeight: "bold",
+                fontSize: "0.80rem",
               }}
             >
               Cập nhật
             </Button>
 
-            <Button
-              variant="outlined"
-              color="success"
-              onClick={async () => {
-                console.log("rows:", rows);
-                await exportToExcel({
-                  selectedDate,
-                  soPhieu,
-                  nguoiNhan,
-                  lyDoXuat,
-                  xuatTaiKho,
-                  soLuongHocSinh,
-                  thuKho,
-                  keToan,
-                  hieuTruong,
-                  rows,
-                });
-              }}
-            >
-              Xuất Excel
-            </Button>
+            <Tooltip title="Xuất Excel">
+              <IconButton
+                color="success"
+                onClick={async () => {
+                  console.log("rows:", rows);
+                  await exportPhieuXuatKho({
+                    selectedDate,
+                    soPhieu,
+                    nguoiNhan,
+                    lyDoXuat,
+                    xuatTaiKho,
+                    soLuongHocSinh,
+                    thuKho,
+                    keToan,
+                    hieuTruong,
+                    rows,
+                  });
+                }}
+              >
+                <FileDownloadIcon />
+              </IconButton>
+            </Tooltip>
+
+
+
           </Stack>
           
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 3 }}>

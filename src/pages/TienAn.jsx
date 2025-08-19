@@ -11,6 +11,13 @@ import { db } from "../firebase";
 import { format } from "date-fns";
 import { useDataContext, useSaveDataToContext } from "../context/DataContext";
 import { LinearProgress } from "@mui/material";
+import { exportPhieuTienAn } from "../utils/exportPhieuTienAn";
+
+
+import UpdateIcon from "@mui/icons-material/Update";         // ✅ icon cập nhật
+import FileDownloadIcon from "@mui/icons-material/FileDownload"; // ✅ icon excel/download
+import { Tooltip, IconButton } from "@mui/material";
+
 
 
 // ✅ Dùng chung dateStorage
@@ -277,15 +284,34 @@ export default function TienAn() {
               variant="contained"
               color="primary"
               onClick={handleUpdateChenhLech} // ✅ lưu vào Firestore
+              startIcon={<UpdateIcon />}   // ✅ icon cập nhật
               sx={{
                 height: 33,
                 px: 2.5,
-                fontWeight: 'bold',
-                fontSize: '0.80rem'
+                fontWeight: "bold",
+                fontSize: "0.80rem",
               }}
             >
               Cập nhật
             </Button>
+
+            {/* Nút xuất Excel cho Phiếu Tiền Ăn */}
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 2 }}>
+              <Tooltip title="Xuất Excel">
+                <IconButton
+                  color="success"
+                  onClick={async () => {
+                    console.log("rows:", data); // ✅ log đúng biến
+                    await exportPhieuTienAn({
+                      selectedDate,
+                      rows: data, // ✅ truyền đúng tên prop như hàm gốc
+                    });
+                  }}
+                >
+                  <FileDownloadIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Stack>
 
           {/* Thanh tiến trình */}
