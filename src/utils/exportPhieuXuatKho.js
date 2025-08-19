@@ -18,6 +18,15 @@ export async function exportPhieuXuatKho({
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Phiếu Xuất Kho");
 
+  // Thiết lập giấy xuôi
+    sheet.pageSetup = {
+    orientation: 'portrait', // giấy xuôi
+    paperSize: 9,            // A4
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0
+    };
+
   const total = rows.reduce((sum, r) => sum + r.thucXuat * r.donGia, 0);
   const totalText = numberToVietnameseText(total);
 

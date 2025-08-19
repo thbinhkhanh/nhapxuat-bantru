@@ -318,12 +318,21 @@ export default function PhieuXuat() {
           
           <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 3 }}>
             {loadingSave && (
-              <Box sx={{ width: "100%", maxWidth: 300, mt: 1, textAlign: "center" }}>
+              <Box
+                sx={{
+                  width: "100%",
+                  maxWidth: 300,
+                  mt: 1,
+                  mb: 3, // ✅ thêm khoảng cách dưới đây
+                  textAlign: "center",
+                  mx: "auto",
+                }}
+              >
                 <LinearProgress
                   variant="determinate"
                   value={progress}
                   sx={{
-                    height: 3, // 👈 giảm độ cao xuống 3px
+                    height: 3, // giảm độ cao xuống 3px
                     borderRadius: 2,
                   }}
                 />
@@ -337,6 +346,7 @@ export default function PhieuXuat() {
               </Box>
             )}
           </Box>
+
 
           {loading && (
             <Box sx={{ 
@@ -518,58 +528,58 @@ export default function PhieuXuat() {
 
           {/* Chức danh */}
           <Box sx={{ mt: 5, overflowX: 'auto' }}>
-  <Box
-    sx={{
-      minWidth: 600,
-      display: "grid",
-      gridTemplateColumns: "repeat(4, 1fr)",
-      gridTemplateRows: "auto auto",
-      textAlign: "center",
-      columnGap: 2,
-      rowGap: 12, // 👈 khoảng cách giữa chức vụ và tên
-    }}
-  >
-    {/* Hàng chức vụ */}
-    <Typography fontWeight="bold">Người nhận hàng</Typography>
-    <Typography fontWeight="bold">Thủ kho</Typography>
-    <Typography fontWeight="bold">Kế toán</Typography>
-    <Typography fontWeight="bold">Thủ trưởng đơn vị</Typography>
+            <Box
+              sx={{
+                minWidth: 600,
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gridTemplateRows: "auto auto",
+                textAlign: "center",
+                columnGap: 2,
+                rowGap: 12, // 👈 khoảng cách giữa chức vụ và tên
+              }}
+            >
+              {/* Hàng chức vụ */}
+              <Typography fontWeight="bold">Người nhận hàng</Typography>
+              <Typography fontWeight="bold">Thủ kho</Typography>
+              <Typography fontWeight="bold">Kế toán</Typography>
+              <Typography fontWeight="bold">Thủ trưởng đơn vị</Typography>
 
-    {/* Hàng tên người ký */}
-    <TextField
-      variant="standard"
-      value={nguoiNhan}
-      onChange={(e) => setNguoiNhan(e.target.value)}
-      placeholder="Người nhận hàng"
-      inputProps={{ style: { textAlign: "center", fontWeight: "bold" } }}
-      sx={textFieldStyle}
-    />
-    <TextField
-      variant="standard"
-      value={thuKho}
-      onChange={(e) => setThuKho(e.target.value)}
-      placeholder="Thủ kho"
-      inputProps={{ style: { textAlign: "center", fontWeight: "bold" } }}
-      sx={textFieldStyle}
-    />
-    <TextField
-      variant="standard"
-      value={keToan}
-      onChange={(e) => setKeToan(e.target.value)}
-      placeholder="Kế toán"
-      inputProps={{ style: { textAlign: "center", fontWeight: "bold" } }}
-      sx={textFieldStyle}
-    />
-    <TextField
-      variant="standard"
-      value={hieuTruong}
-      onChange={(e) => setHieuTruong(e.target.value)}
-      placeholder="Thủ trưởng đơn vị"
-      inputProps={{ style: { textAlign: "center", fontWeight: "bold" } }}
-      sx={textFieldStyle}
-    />
-  </Box>
-</Box>
+              {/* Hàng tên người ký */}
+              <TextField
+                variant="standard"
+                value={nguoiNhan}
+                onChange={(e) => setNguoiNhan(e.target.value)}
+                placeholder="Người nhận hàng"
+                inputProps={{ style: { textAlign: "center", fontWeight: "bold" } }}
+                sx={textFieldStyle}
+              />
+              <TextField
+                variant="standard"
+                value={thuKho}
+                onChange={(e) => setThuKho(e.target.value)}
+                placeholder="Thủ kho"
+                inputProps={{ style: { textAlign: "center", fontWeight: "bold" } }}
+                sx={textFieldStyle}
+              />
+              <TextField
+                variant="standard"
+                value={keToan}
+                onChange={(e) => setKeToan(e.target.value)}
+                placeholder="Kế toán"
+                inputProps={{ style: { textAlign: "center", fontWeight: "bold" } }}
+                sx={textFieldStyle}
+              />
+              <TextField
+                variant="standard"
+                value={hieuTruong}
+                onChange={(e) => setHieuTruong(e.target.value)}
+                placeholder="Thủ trưởng đơn vị"
+                inputProps={{ style: { textAlign: "center", fontWeight: "bold" } }}
+                sx={textFieldStyle}
+              />
+            </Box>
+          </Box>
         </CardContent>
       </Card>
     </Box>

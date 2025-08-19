@@ -9,10 +9,18 @@ export async function exportPhieuChiCho({
 }) {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Phiếu Chi Chợ");
+  // Thiết lập giấy ngang
+  sheet.pageSetup = {
+    orientation: 'landscape',
+    paperSize: 9, // A4
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0
+  };
 
   // TIÊU ĐỀ
   sheet.mergeCells("A1:C1");
-  sheet.getCell("A1").value = "Đơn vị: Trường Tiểu học  Bình Khánh";
+  sheet.getCell("A1").value = "Đơn vị: Trường Tiểu học Bình Khánh";
   sheet.getCell("A1").font = { bold: true, size: 12 };
   sheet.getCell("A1").alignment = { horizontal: "left" };
 
@@ -31,54 +39,45 @@ export async function exportPhieuChiCho({
   sheet.getCell("A5").alignment = { horizontal: "center" };
   sheet.getCell("A5").font = { bold: true, italic: true, size: 11, name: "Arial" };
 
-  // ✅ Thêm dòng trống sau ngày
-  sheet.addRow([]);
+  sheet.addRow([]); // dòng trống
 
-  // HEADER DÒNG 1 (dòng 7)
-const headerRow1 = sheet.addRow([
-  "STT", "DIỄN GIẢI", "ĐVT", "SỐ TIỀN", "", "", "TRÍCH 5%", "THỰC NHẬN", "GHI CHÚ"
-]);
+  // HEADER DÒNG 1
+  const headerRow1 = sheet.addRow([
+    "STT", "Diễn giải", "ĐVT", "Số tiền", "", "", "Trích 5%", "Thực nhận", "Ghi chú"
+  ]);
 
-// Merge dọc các cột đơn
-sheet.mergeCells(`A${headerRow1.number}:A${headerRow1.number + 1}`);
-sheet.mergeCells(`B${headerRow1.number}:B${headerRow1.number + 1}`);
-sheet.mergeCells(`C${headerRow1.number}:C${headerRow1.number + 1}`);
-sheet.mergeCells(`G${headerRow1.number}:G${headerRow1.number + 1}`);
-sheet.mergeCells(`H${headerRow1.number}:H${headerRow1.number + 1}`);
-sheet.mergeCells(`I${headerRow1.number}:I${headerRow1.number + 1}`);
+  sheet.mergeCells(`A${headerRow1.number}:A${headerRow1.number + 1}`);
+  sheet.mergeCells(`B${headerRow1.number}:B${headerRow1.number + 1}`);
+  sheet.mergeCells(`C${headerRow1.number}:C${headerRow1.number + 1}`);
+  sheet.mergeCells(`G${headerRow1.number}:G${headerRow1.number + 1}`);
+  sheet.mergeCells(`H${headerRow1.number}:H${headerRow1.number + 1}`);
+  sheet.mergeCells(`I${headerRow1.number}:I${headerRow1.number + 1}`);
+  sheet.mergeCells(`D${headerRow1.number}:F${headerRow1.number}`);
 
-// Merge ngang nhóm "Số tiền"
-sheet.mergeCells(`D${headerRow1.number}:F${headerRow1.number}`);
+  const headerFill = { type: "pattern", pattern: "solid", fgColor: { argb: "D9E1F2" } };
+  headerRow1.font = { bold: true };
+  headerRow1.alignment = { horizontal: "center", vertical: "middle" };
+  headerRow1.eachCell((cell) => {
+    cell.fill = headerFill;
+    cell.border = {
+      top: { style: "thin" }, left: { style: "thin" },
+      bottom: { style: "thin" }, right: { style: "thin" }
+    };
+  });
 
-const headerFill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE5CC" } };
-headerRow1.font = { bold: true };
-headerRow1.alignment = { horizontal: "center", vertical: "middle" };
-headerRow1.eachCell((cell) => {
-  cell.fill = headerFill;
-  cell.border = {
-    top: { style: "thin" }, left: { style: "thin" },
-    bottom: { style: "thin" }, right: { style: "thin" }
-  };
-});
-
-// ✅ HEADER DÒNG 2 (dòng 8)
-// Ghi trực tiếp vào dòng 8, cột D, E, F
-sheet.getCell("D8").value = "SỐ LƯỢNG";
-sheet.getCell("E8").value = "ĐƠN GIÁ";
-sheet.getCell("F8").value = "THÀNH TIỀN";
-
-// Định dạng từng ô
-["D8", "E8", "F8"].forEach((cellRef) => {
-  const cell = sheet.getCell(cellRef);
-  cell.font = { bold: true }; // ✅ Chữ đứng, in đậm
-  cell.alignment = { horizontal: "center", vertical: "middle" };
-  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE5CC" } };
-  cell.border = {
-    top: { style: "thin" }, left: { style: "thin" },
-    bottom: { style: "thin" }, right: { style: "thin" }
-  };
-});
-
+  // HEADER DÒNG 2
+  ["D8", "E8", "F8"].forEach((cellRef, idx) => {
+    const cell = sheet.getCell(cellRef);
+    const titles = ["Số lượng", "Đơn giá", "Thành tiền"];
+    cell.value = titles[idx];
+    cell.font = { bold: true };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.fill = headerFill;
+    cell.border = {
+      top: { style: "thin" }, left: { style: "thin" },
+      bottom: { style: "thin" }, right: { style: "thin" }
+    };
+  });
 
   // DỮ LIỆU
   let sttLoaiRow = 1;
@@ -90,17 +89,16 @@ sheet.getCell("F8").value = "THÀNH TIỀN";
   const tongCong = rows
     .filter(r => !r.isLoaiRow)
     .reduce((acc, r) => {
-      const thanhTien = r.thanhTien || ((r.soLuong || 0) * (r.donGia || 0));
+      const thanhTien = r.thanhTien ?? ((r.soLuong || 0) * (r.donGia || 0));
       const trich = Math.round(thanhTien * 0.05);
-      const thucNhan = thanhTien - trich;
       acc.tongThanhTien += thanhTien;
-      acc.tongThucNhan += thucNhan;
+      acc.tongThucNhan += thanhTien - trich;
       return acc;
     }, { tongThanhTien: 0, tongThucNhan: 0 });
 
   rows.forEach((r, index) => {
     const isLoaiRow = r.isLoaiRow;
-    const thanhTien = r.thanhTien || ((r.soLuong || 0) * (r.donGia || 0));
+    const thanhTien = r.thanhTien ?? ((r.soLuong || 0) * (r.donGia || 0));
     const trich = Math.round(thanhTien * 0.05);
     const thucNhan = thanhTien - trich;
 
@@ -109,46 +107,28 @@ sheet.getCell("F8").value = "THÀNH TIỀN";
         currentLoaiRow.getCell(6).value = loaiThanhTien;
         currentLoaiRow.getCell(7).value = loaiTrich;
         currentLoaiRow.getCell(8).value = loaiThucNhan;
-        loaiThanhTien = 0;
-        loaiTrich = 0;
-        loaiThucNhan = 0;
+        loaiThanhTien = 0; loaiTrich = 0; loaiThucNhan = 0;
       }
 
-      const row = sheet.addRow([
-        sttLoaiRow++, r.loai ?? r.name ?? r.dienGiai ?? "", "", "", "", "", "", "", ""
-      ]);
+      const row = sheet.addRow([sttLoaiRow++, r.loai ?? r.name ?? r.dienGiai ?? "", "", "", "", "", "", "", ""]);
       currentLoaiRow = row;
 
       row.eachCell((cell, colNumber) => {
         cell.alignment = { horizontal: colNumber === 2 ? "left" : "center", vertical: "middle" };
-        cell.border = {
-          top: { style: "thin" }, left: { style: "thin" },
-          bottom: { style: "thin" }, right: { style: "thin" }
-        };
+        cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
         cell.font = { bold: true, color: { argb: "C00000" } };
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "D9D9D9" } };
-        if ([6, 7, 8].includes(colNumber)) {
-          cell.numFmt = "#,##0";
-        }
+        if ([6, 7, 8].includes(colNumber)) cell.numFmt = "#,##0";
       });
     } else {
-      const row = sheet.addRow([
-        "", r.dienGiai ?? "", r.dvt || "", r.soLuong || "", r.donGia || "",
-        thanhTien, trich, thucNhan, r.ghiChu || ""
-      ]);
+      const row = sheet.addRow(["", r.dienGiai ?? "", r.dvt || "", r.soLuong || "", r.donGia || "", thanhTien, trich, thucNhan, r.ghiChu || ""]);
       loaiThanhTien += thanhTien;
       loaiTrich += trich;
       loaiThucNhan += thucNhan;
 
       row.eachCell((cell, colNumber) => {
         cell.alignment = { horizontal: colNumber === 2 ? "left" : "center", vertical: "middle" };
-        cell.border = {
-          top: { style: "thin" }, left: { style: "thin" },
-          bottom: { style: "thin" }, right: { style: "thin" }
-        };
-        if ([5, 6, 7, 8].includes(colNumber) && cell.value !== "") {
-          cell.numFmt = "#,##0";
-        }
+        cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+        if ([5, 6, 7, 8].includes(colNumber) && cell.value !== "") cell.numFmt = "#,##0";
       });
     }
 
@@ -159,26 +139,14 @@ sheet.getCell("F8").value = "THÀNH TIỀN";
     }
   });
 
-  // ✅ KHÔNG thêm dòng trống phía trên dòng tổng cộng
-  const tongRow = sheet.addRow([
-    "", "CỘNG", "", "", "", tongCong.tongThanhTien,
-    Math.round(tongCong.tongThanhTien * 0.05),
-    tongCong.tongThucNhan, ""
-  ]);
+  // DÒNG TỔNG CỘNG
+  const tongRow = sheet.addRow(["", "CỘNG", "", "", "", tongCong.tongThanhTien, Math.round(tongCong.tongThanhTien * 0.05), tongCong.tongThucNhan, ""]);
   tongRow.font = { bold: true };
   tongRow.alignment = { horizontal: "center" };
-  const tongFill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD966" } };
   tongRow.eachCell((cell, colNumber) => {
-    cell.border = {
-      top: { style: "thin" }, left: { style: "thin" },
-      bottom: { style: "thin" }, right: { style: "thin" }
-    };
-    if (colNumber >= 1 && colNumber <= 9) cell.fill = tongFill;
-    if ([6, 7, 8].includes(colNumber)) {
-      cell.numFmt = "#,##0";
-    }
+    cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+    if ([6, 7, 8].includes(colNumber)) cell.numFmt = "#,##0";
   });
-
 
   // CHỮ KÝ
   sheet.addRow([]);
@@ -187,21 +155,16 @@ sheet.getCell("F8").value = "THÀNH TIỀN";
   signHeader.font = { bold: true };
   signHeader.alignment = { horizontal: "center" };
 
-  // ✅ Chèn 5 dòng trống
-  for (let i = 0; i < 5; i++) {
-    sheet.addRow([]);
-  }
+  for (let i = 0; i < 5; i++) sheet.addRow([]);
 
- const signNames = sheet.addRow([nguoiDiCho]);
+  const signNames = sheet.addRow([nguoiDiCho]);
   sheet.mergeCells(`A${signNames.number}:C${signNames.number}`);
   signNames.alignment = { horizontal: "center" };
-  signNames.font = { bold: true }; // ✅ Tên sẽ được in đậm
+  signNames.font = { bold: true };
 
   // ĐỘ RỘNG CỘT
-  const colWidths = [5, 40, 10, 15, 15, 20, 15, 15, 15];
-  colWidths.forEach((w, i) => {
-    sheet.getColumn(i + 1).width = w;
-  });
+  const colWidths = [6, 30, 10, 15, 15, 15, 15, 15, 15];
+  colWidths.forEach((w, i) => sheet.getColumn(i + 1).width = w);
 
   // XUẤT FILE
   const filename = `Phieu_Chi_Cho_${format(selectedDate, "yyyyMMdd")}.xlsx`;

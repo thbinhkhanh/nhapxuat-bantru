@@ -5,6 +5,15 @@ import { format } from "date-fns";
 export async function exportPhieuTienAn({ selectedDate, rows }) {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Phiếu Tiền Ăn");
+  
+  // Thiết lập giấy xuôi
+    sheet.pageSetup = {
+    orientation: 'portrait', // giấy xuôi
+    paperSize: 9,            // A4
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0
+    };
 
   // TIÊU ĐỀ
     sheet.getCell("A1").value = "Đơn vị: Trường Tiểu học Bình Khánh";
@@ -33,7 +42,7 @@ export async function exportPhieuTienAn({ selectedDate, rows }) {
   headerRow.font = { bold: true };
   headerRow.alignment = { horizontal: "center", vertical: "middle" };
   headerRow.eachCell((cell) => {
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE5CC" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "D9E1F2" } }; // ✅ xanh nhạt
     cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
   });
 
@@ -91,7 +100,7 @@ sheet.addRow(["", "", "", "", "", ""]);
 
 // Dòng ngày ký — in nghiêng
 const ngayStr = format(selectedDate, "dd 'tháng' MM 'năm' yyyy");
-const dateRow = sheet.addRow(["", "", "", `BÌnh Khánh, ngày ${ngayStr}`, "", ""]);
+const dateRow = sheet.addRow(["", "", "", `Bình Khánh, ngày ${ngayStr}`, "", ""]);
 sheet.mergeCells(`D${dateRow.number}:F${dateRow.number}`);
 dateRow.getCell(4).alignment = { horizontal: "center" };
 dateRow.getCell(4).font = { italic: true };
@@ -127,7 +136,7 @@ nameRow.getCell(4).alignment = { horizontal: "center" };
 
 
   // ĐỘ RỘNG CỘT
-  [6, 35, 15, 15, 15, 15].forEach((w, i) => {
+  [6, 35, 10, 10, 15, 15].forEach((w, i) => {
     sheet.getColumn(i + 1).width = w;
   });
 

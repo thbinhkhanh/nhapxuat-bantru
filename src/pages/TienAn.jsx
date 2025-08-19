@@ -318,7 +318,16 @@ export default function TienAn() {
           {/* Thanh tiến trình */}
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 3 }}>
               {loadingSave && (
-                <Box sx={{ width: "100%", maxWidth: 300, mt: 1, textAlign: "center" }}>
+                <Box
+                  sx={{
+                    width: "100%",
+                    maxWidth: 300,
+                    mt: 1,
+                    mb: 3, // ✅ thêm khoảng cách dưới đây
+                    textAlign: "center",
+                    mx: "auto",
+                  }}
+                >
                   <LinearProgress
                     variant="determinate"
                     value={progress}
@@ -337,6 +346,7 @@ export default function TienAn() {
                 </Box>
               )}
             </Box>
+
 
             {loading && (
               <Box sx={{ 
