@@ -285,7 +285,7 @@ export default function ImportData({ onBack }) {
       <Box maxWidth={480} mx="auto">
         <Card elevation={8} sx={{ p: 4, borderRadius: 4, mt: 0 }}>
           <Typography variant="h5" color="primary" fontWeight="bold" align="center" gutterBottom>
-            TẢI DANH SÁCH THỰC PHẨM
+            NHẬP DANH SÁCH THỰC PHẨM
           </Typography>
           <Box sx={{ height: "2px", width: "100%", backgroundColor: "#1976d2", borderRadius: 1, mt: 2, mb: 4 }} />
 

@@ -20,6 +20,7 @@ import { db } from "../firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { arrayUnion } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import UpdateIcon from '@mui/icons-material/Update';
 
 export default function UpdateType() {
   const { unmatchedItems } = useUpdateType();
@@ -251,11 +252,19 @@ export default function UpdateType() {
             variant="contained"
             color="primary"
             onClick={handleUpdate}
-            sx={{ height: 33, px: 2.5, fontWeight: "bold", fontSize: "0.80rem" }}
+            startIcon={<UpdateIcon />}
+            sx={{ 
+              height: 33, 
+              px: 2.5, 
+              fontWeight: "bold", 
+              fontSize: "0.80rem",
+              whiteSpace: "nowrap" // chữ không xuống hàng
+            }}
           >
             Cập nhật
           </Button>
         </Box>
+
         <TableContainer component={Paper} sx={{ overflowX: "auto", mt: 4 }}>
           <Table size="small" sx={{ minWidth: 900 }}>
             <TableHead>

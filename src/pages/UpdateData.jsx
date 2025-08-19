@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { getFirestore } from "firebase/firestore";
 import { app } from "../firebase";
 import { doc, setDoc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import UpdateIcon from '@mui/icons-material/Update'; // import icon bạn muốn
 
 
 const db = getFirestore(app);
@@ -236,7 +237,19 @@ export default function UpdateData() {
             />
           </LocalizationProvider>
 
-          <Button variant="contained" color="primary" onClick={handleUpdate} sx={{ height: 33, px: 2.5, fontWeight: 'bold', fontSize: '0.80rem' }}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleUpdate}
+            startIcon={<UpdateIcon />} // thêm icon vào đây
+            sx={{ 
+              height: 33, 
+              px: 2.5, 
+              fontWeight: 'bold', 
+              fontSize: '0.80rem',
+              whiteSpace: 'nowrap' // giữ chữ liền dòng
+            }}
+          >
             Cập nhật
           </Button>
         </Stack>
