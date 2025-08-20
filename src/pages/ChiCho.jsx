@@ -43,17 +43,17 @@ export default function ChiCho() {
       setLoading(true);       // 🔹 Bắt đầu loading
       setProgress(10);        // 🔹 Set progress khởi đầu
 
-      console.log("[ChiCho] selectedDate =", selectedDate, "instanceof Date?", selectedDate instanceof Date);
+      //console.log("[ChiCho] selectedDate =", selectedDate, "instanceof Date?", selectedDate instanceof Date);
 
       const yyyy = selectedDate.getFullYear();
       const mm = String(selectedDate.getMonth() + 1).padStart(2, "0");
       const dd = String(selectedDate.getDate()).padStart(2, "0");
       const dateStr = `${yyyy}-${mm}-${dd}`;
 
-      console.log(`[ChiCho] Đang xử lý ngày: ${dateStr}`);
+      //console.log(`[ChiCho] Đang xử lý ngày: ${dateStr}`);
 
       if (dataByDate[dateStr]?.chiCho) {
-        console.log(`[ChiCho] ✅ Dữ liệu ngày ${dateStr} lấy từ context:`, dataByDate[dateStr].chiCho);
+        //console.log(`[ChiCho] ✅ Dữ liệu ngày ${dateStr} lấy từ context:`, dataByDate[dateStr].chiCho);
         setData(dataByDate[dateStr].chiCho.tableData);
         setTongCong(dataByDate[dateStr].chiCho.tongCong);
         setProgress(100);    // 🔹 Hoàn tất
@@ -62,20 +62,20 @@ export default function ChiCho() {
       }
 
       try {
-        console.log(`[ChiCho] 🔄 Fetch Firestore: DATA/${dateStr}`);
+        //console.log(`[ChiCho] 🔄 Fetch Firestore: DATA/${dateStr}`);
         const docRef = doc(db, "DATA", dateStr);
         const docSnap = await getDoc(docRef);
         setProgress(50);      // 🔹 Fetch xong, đang xử lý dữ liệu
 
         if (docSnap.exists()) {
           const docData = docSnap.data();
-          console.log(`[ChiCho] ✅ Firestore trả về DATA/${dateStr}:`, docData);
+          //console.log(`[ChiCho] ✅ Firestore trả về DATA/${dateStr}:`, docData);
 
           const matHang = Array.isArray(docData.matHang) ? docData.matHang : [];
-          console.log("[ChiCho] Danh sách mặt hàng:", matHang);
+          //console.log("[ChiCho] Danh sách mặt hàng:", matHang);
 
           saveDataToContext(selectedDate, { ...docData });
-          console.log("[ChiCho] 👉 Đã save toàn bộ docData vào context");
+          //console.log("[ChiCho] 👉 Đã save toàn bộ docData vào context");
 
           const allowedKeywords = ["Đường cát", "Gạo", "Dầu ăn", "Hạt nêm", "Nước mắm"];
 
@@ -85,14 +85,14 @@ export default function ChiCho() {
             if (!loaiMap[l]) loaiMap[l] = [];
             loaiMap[l].push(m);
           });
-          console.log("[ChiCho] loaiMap sau khi group:", loaiMap);
+          //console.log("[ChiCho] loaiMap sau khi group:", loaiMap);
 
           const filteredLoaiMap = Object.fromEntries(
             Object.entries(loaiMap).filter(([_, items]) =>
               !items.some(m => allowedKeywords.some(keyword => m.ten.includes(keyword)))
             )
           );
-          console.log("[ChiCho] filteredLoaiMap sau khi loại keyword:", filteredLoaiMap);
+          //console.log("[ChiCho] filteredLoaiMap sau khi loại keyword:", filteredLoaiMap);
 
           const sortedLoaiEntries = Object.entries(filteredLoaiMap).sort((a, b) => {
             const loaiA = a[0].toUpperCase();
@@ -149,8 +149,8 @@ export default function ChiCho() {
           const thucNhan = tongTien - trich;
           const tongCongData = { tongTien, trich, thucNhan };
 
-          console.log("[ChiCho] ✅ Kết quả cuối cùng tableData:", tableData);
-          console.log("[ChiCho] ✅ Tổng cộng:", tongCongData);
+          //console.log("[ChiCho] ✅ Kết quả cuối cùng tableData:", tableData);
+          //console.log("[ChiCho] ✅ Tổng cộng:", tongCongData);
 
           setData(tableData);
           setTongCong(tongCongData);
@@ -161,7 +161,7 @@ export default function ChiCho() {
               tongCong: tongCongData
             }
           });
-          console.log("[ChiCho] 👉 Đã save chiCho vào context");
+          //console.log("[ChiCho] 👉 Đã save chiCho vào context");
         } else {
           console.warn(`[ChiCho] ❌ Không tìm thấy document DATA/${dateStr}`);
           setData([]);
@@ -245,7 +245,7 @@ export default function ChiCho() {
                       alert("Chức năng xuất Excel không khả dụng trên điện thoại. Vui lòng sử dụng máy tính để xuất file.");
                       return;
                     }
-                    console.log("rows:", data);
+                    //console.log("rows:", data);
                     await exportPhieuChiCho({
                       selectedDate,
                       rows: data,

@@ -49,9 +49,9 @@ export const useSaveDataToContext = () => {
 
     // --- Thêm log số lượng học sinh ---
     if (data.soLuongHocSinh !== undefined) {
-      console.log(`📊 [Context] Ngày ${dateStr} có số lượng học sinh:`, data.soLuongHocSinh);
+      //console.log(`📊 [Context] Ngày ${dateStr} có số lượng học sinh:`, data.soLuongHocSinh);
     } else {
-      console.log(`📊 [Context] Ngày ${dateStr} chưa có số lượng học sinh`);
+      //console.log(`📊 [Context] Ngày ${dateStr} chưa có số lượng học sinh`);
     }
 
     setDataByDate(prev => ({

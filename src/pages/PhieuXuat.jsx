@@ -147,7 +147,7 @@ export default function PhieuXuat() {
         { suatAn: soLuong, updatedAt: new Date().toISOString() },
         { merge: true }
       );
-      console.log(`✅ Đã cập nhật số lượng học sinh: ${soLuong}`);
+      //console.log(`✅ Đã cập nhật số lượng học sinh: ${soLuong}`);
     } catch (err) {
       console.error("❌ Lỗi khi cập nhật số lượng học sinh:", err);
     }
@@ -219,7 +219,7 @@ export default function PhieuXuat() {
 
       if (infoSnap.exists()) {
         const infoData = infoSnap.data();
-        console.log("✅ INFO data:", infoData);
+        //console.log("✅ INFO data:", infoData);
 
         setSoPhieu(infoData.soPhieu || "02/01");
         setNguoiNhan(infoData.nguoiNhan || "Đặng Thị Tuyết Nga");
@@ -434,7 +434,7 @@ export default function PhieuXuat() {
                       return;
                     }
 
-                    console.log("rows:", rows);
+                    //console.log("rows:", rows);
                     await exportPhieuXuatKho({
                       selectedDate,
                       soPhieu,
@@ -695,8 +695,8 @@ export default function PhieuXuat() {
                           const newTotal = newRows.reduce((sum, r) => sum + r.thanhTien, 0);
                           const newTotalText = numberToVietnameseText(newTotal);
 
-                          console.log("Tổng tiền:", newTotal);
-                          console.log("Bằng chữ:", newTotalText);
+                          //console.log("Tổng tiền:", newTotal);
+                          //console.log("Bằng chữ:", newTotalText);
                         }}
                         inputProps={{
                           min: 0,

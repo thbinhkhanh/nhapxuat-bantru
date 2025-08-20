@@ -91,7 +91,7 @@ export default function TienAn() {
       });
 
       setData(updatedTienAn);
-      console.log("Số lượng học sinh từ context:", suatAn);
+      //console.log("Số lượng học sinh từ context:", suatAn);
       setLoading(false);
       setProgress(100);
       return;
@@ -323,7 +323,7 @@ export default function TienAn() {
                       alert("Chức năng xuất Excel không khả dụng trên điện thoại. Vui lòng sử dụng máy tính để xuất file.");
                       return;
                     }
-                    console.log("rows:", data); // ✅ log đúng biến
+                    //console.log("rows:", data); // ✅ log đúng biến
                     await exportPhieuTienAn({
                       selectedDate,
                       rows: data, // ✅ truyền đúng tên prop như hàm gốc
