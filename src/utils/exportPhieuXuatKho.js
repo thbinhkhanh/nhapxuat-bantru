@@ -53,12 +53,12 @@ export async function exportPhieuXuatKho({
 
   // THÔNG TIN PHIẾU
   const infoRows = [
-    [`Ngày: ${format(selectedDate, "dd/MM/yyyy")}`],
-    [`Số: ${soPhieu}`],
-    [`Người nhận: ${nguoiNhan}`],
-    [`Lý do xuất kho: ${lyDoXuat}`],
-    [`Xuất tại kho: ${xuatTaiKho}`],
-    [`Số lượng học sinh: ${soLuongHocSinh}`],
+    [`Ngày:     \t${format(selectedDate, "dd/MM/yyyy")}`],
+    [`Số:          \t${soPhieu}`],
+    [`Người nhận: \t${nguoiNhan}`],
+    [`Lý do xuất kho: \t${lyDoXuat}`],
+    [`Xuất tại kho: \t${xuatTaiKho}`],
+    [`Số lượng học sinh:      \t${soLuongHocSinh}`],
   ];
   infoRows.forEach((row, i) => {
     sheet.mergeCells(`A${6 + i}:H${6 + i}`);

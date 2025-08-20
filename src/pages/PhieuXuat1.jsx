@@ -12,9 +12,7 @@ import viLocale from "date-fns/locale/vi";
 import { numberToVietnameseText } from "../utils/numberToText";
 import { getStoredDate, setStoredDate } from "../utils/dateStorage";
 import { useDataContext, useSaveDataToContext } from "../context/DataContext"; 
-//import { doc, setDoc } from "firebase/firestore";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-
+import { doc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { format } from "date-fns";
 import { exportPhieuXuatKho } from "../utils/exportPhieuXuatKho";
@@ -32,7 +30,7 @@ export default function PhieuXuat() {
   // Local state (các state phiếu)
   const [selectedDate, setSelectedDate] = useState(getStoredDate());
   const [rows, setRows] = useState([]);
-  
+
   // 👉 loading chỉ dùng cho fetch nếu cần
   const [loading, setLoading] = useState(false);
 
@@ -52,8 +50,6 @@ export default function PhieuXuat() {
   const [thuKho, setThuKho] = useState("Nguyễn Văn Tám");
   const [keToan, setKeToan] = useState("Lê Thị Thu Hương");
   const [hieuTruong, setHieuTruong] = useState("Đặng Thái Bình");
-
-  const [totalText, setTotalText] = useState("");
 
   const inputWidth = 200;
 
@@ -116,8 +112,7 @@ export default function PhieuXuat() {
           name: item.ten,
           unit: item.dvt,
           yeuCau: item.soLuong,
-          //thucXuat: item.soLuong,
-          thucXuat: item.thucXuat !== undefined ? item.thucXuat : item.soLuong,
+          thucXuat: item.soLuong,
           donGia: item.donGia,
           thanhTien: item.thanhTien,
         }));
@@ -175,21 +170,14 @@ export default function PhieuXuat() {
 
   const handleThucXuatChange = (index, value) => {
     const newRows = [...rows];
-    const newThucXuat = Number(value);
-
-    newRows[index].thucXuat = newThucXuat;
-    newRows[index].thanhTien = newThucXuat * newRows[index].donGia;
-
+    newRows[index].thucXuat = Number(value);
     setRows(newRows);
-    saveDataToContext(selectedDate, newRows);
-
-    const newTotal = newRows.reduce((sum, row) => sum + row.thanhTien, 0);
-    setTotalText(numberToVietnameseText(newTotal));
+    saveDataToContext(selectedDate, newRows); // cập nhật context
   };
 
   // Hàm xử lý khi bấm Cập nhật
-  const handleUpdateData = async () => {
-    setLoadingSave(true);
+  const handleSaveInfo = async () => {
+    setLoadingSave(true);       // Bắt đầu hiển thị tiến trình
     setSuccess(false);
     setProgress(0);
     setMessage("");
@@ -197,13 +185,11 @@ export default function PhieuXuat() {
     try {
       // Giả lập tiến trình cập nhật (tăng dần từ 0 đến 100)
       for (let i = 0; i <= 100; i += 10) {
-        await new Promise((r) => setTimeout(r, 80));
+        await new Promise((r) => setTimeout(r, 80)); // chờ 80ms mỗi bước
         setProgress(i);
       }
 
       const docId = format(selectedDate, "yyyy-MM-dd");
-
-      // ✅ Lưu thông tin học sinh vào "INFO"
       await setDoc(doc(db, "INFO", docId), {
         soPhieu,
         nguoiNhan,
@@ -216,53 +202,18 @@ export default function PhieuXuat() {
         updatedAt: new Date().toISOString(),
       });
 
-      // ✅ Cập nhật lại số lượng và thành tiền vào "DATA"
-      const dataRef = doc(db, "DATA", docId);
-      const dataSnap = await getDoc(dataRef);
-
-      if (dataSnap.exists()) {
-        const docData = dataSnap.data();
-        const matHang = Array.isArray(docData.matHang) ? [...docData.matHang] : [];
-
-        const updatedMatHang = matHang.map((item) => {
-          const matchedRow = rows.find((r) => r.name === item.ten);
-          return matchedRow
-            ? {
-                ...item,
-                //soLuong: matchedRow.thucXuat,
-                thucXuat: matchedRow.thucXuat,
-                thanhTien: matchedRow.thanhTien,
-              }
-            : item;
-        });
-
-        await setDoc(dataRef, { matHang: updatedMatHang }, { merge: true });
-      }
-
-      setMessage("✅ Đã lưu thông tin học sinh và cập nhật số lượng thành tiền!");
+      setMessage("✅ Đã lưu thông tin học sinh thành công!");
       setSuccess(true);
     } catch (err) {
-      console.error("Lỗi khi lưu:", err);
+      console.error("Lỗi khi lưu HOCSINH:", err);
       setMessage("❌ Lỗi khi lưu dữ liệu!");
       setSuccess(false);
     } finally {
-      setLoadingSave(false);
+      setLoadingSave(false); // Ẩn tiến trình sau khi hoàn tất
     }
   };
 
-  const keywordOrder = ["gạo", "đường", "dầu ăn", "nước mắm", "hạt nêm" ];
-  const sortedRows = [...rows]
-    .sort((a, b) => {
-      const aIndex = keywordOrder.findIndex(keyword => a.name.toLowerCase().includes(keyword));
-      const bIndex = keywordOrder.findIndex(keyword => b.name.toLowerCase().includes(keyword));
-      return aIndex - bIndex;
-    })
-    .map((item, index) => ({
-      ...item,
-      stt: index + 1, // ✅ gán lại STT theo thứ tự mới
-    }));
-
-
+  
    return (
     <Box sx={{ pt: "20px", pb: 6, px: { xs: 1, sm: 2 }, bgcolor: "#e3f2fd", minHeight: "100vh" }}>
       <Card elevation={8} sx={{ maxWidth: 1100, mx: "auto", borderRadius: 3, overflow: "hidden" }}>
@@ -327,7 +278,7 @@ export default function PhieuXuat() {
               <Button
                 variant="contained"
                 color="primary"
-                onClick={handleUpdateData}
+                onClick={handleSaveInfo}
                 startIcon={<UpdateIcon />}
                 sx={{
                   height: 36,
@@ -449,11 +400,7 @@ export default function PhieuXuat() {
               <Typography component="span">Ngày: </Typography>
                 <TextField
                   size="small"
-                  value={new Intl.DateTimeFormat("vi-VN", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric"
-                  }).format(selectedDate)}
+                  value={selectedDate.toLocaleDateString("vi-VN")}
                   variant="standard"
                   InputProps={{
                     readOnly: true,
@@ -562,7 +509,7 @@ export default function PhieuXuat() {
               </TableHead>
 
               <TableBody>
-                {sortedRows.map((row, index) => (
+                {rows.map((row, index) => (
                   <TableRow key={row.stt} hover sx={{ minHeight: 35 }}>
                     <TableCell align="center">{row.stt}</TableCell>
                     <TableCell sx={{ fontSize: '0.85rem' }}>{row.name}</TableCell>
@@ -574,24 +521,9 @@ export default function PhieuXuat() {
                         type="number"
                         value={row.thucXuat}
                         onChange={(e) => {
-                          const newThucXuat = Number(e.target.value);
-
-                          const newRows = rows.map((r) => {
-                            if (r.name === row.name) {
-                              const thanhTien = newThucXuat * r.donGia;
-                              return { ...r, thucXuat: newThucXuat, thanhTien };
-                            }
-                            return r;
-                          });
-
+                          const newRows = [...rows];
+                          newRows[index].thucXuat = Number(e.target.value);
                           setRows(newRows);
-                          saveDataToContext(selectedDate, newRows);
-
-                          const newTotal = newRows.reduce((sum, r) => sum + r.thanhTien, 0);
-                          const newTotalText = numberToVietnameseText(newTotal);
-
-                          console.log("Tổng tiền:", newTotal);
-                          console.log("Bằng chữ:", newTotalText);
                         }}
                         inputProps={{
                           min: 0,

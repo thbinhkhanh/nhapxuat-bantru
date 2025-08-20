@@ -550,7 +550,10 @@ export default function TienAn() {
             <Typography sx={{ fontStyle: "italic" }}>
               {(() => {
                 const selected = getStoredDate();
-                return `Cần Giờ, ngày ${selected.getDate()} tháng ${selected.getMonth() + 1} năm ${selected.getFullYear()}`;
+                const day = String(selected.getDate()).padStart(2, "0");
+                const month = String(selected.getMonth() + 1).padStart(2, "0");
+                const year = selected.getFullYear();
+                return `Bình Khánh, ngày ${day} tháng ${month} năm ${year}`;
               })()}
             </Typography>
           </Box>
