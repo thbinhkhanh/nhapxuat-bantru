@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Card, CardContent, Stack, Button,
-  TextField, Divider, LinearProgress, IconButton, Tooltip
+  TextField, Divider, LinearProgress, IconButton, Tooltip, Alert 
 } from "@mui/material";
 
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
@@ -12,42 +12,64 @@ import viLocale from "date-fns/locale/vi";
 import { numberToVietnameseText } from "../utils/numberToText";
 import { getStoredDate, setStoredDate } from "../utils/dateStorage";
 import { useDataContext, useSaveDataToContext } from "../context/DataContext"; 
-//import { doc, setDoc } from "firebase/firestore";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, getFirestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp } from "firebase/app";
 
-import { db } from "../firebase";
 import { format } from "date-fns";
 import { exportPhieuXuatKho } from "../utils/exportPhieuXuatKho";
 
-import UpdateIcon from "@mui/icons-material/Update";         // ✅ icon cập nhật
-import FileDownloadIcon from "@mui/icons-material/FileDownload"; // ✅ icon excel/download
+import UpdateIcon from "@mui/icons-material/Update";         
+import FileDownloadIcon from "@mui/icons-material/FileDownload"; 
+import SyncIcon from '@mui/icons-material/Sync';
 
+// Firestore mặc định
+const firebaseConfig = {
+  apiKey: "AIzaSyDABUgzEzkd02WfAFU-hUuol_ZFRVo97YI",
+  authDomain: "diemdanh-bantru.firebaseapp.com",
+  projectId: "diemdanh-bantru",
+  storageBucket: "diemdanh-bantru.firebasestorage.app",
+  messagingSenderId: "64783667725",
+  appId: "1:64783667725:web:953a812eb9324429d67b44",
+  measurementId: "G-QWRBNFD2T5",
+};
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
+// Firestore 2 chỉ dùng cho handleSync
+const firebaseConfigSync = {
+  apiKey: "AIzaSyDABUgzEzkd02WfAFU-hUuol_ZFRVo97YI",
+  authDomain: "diemdanh-bantru.firebaseapp.com",
+  projectId: "diemdanh-bantru",
+  storageBucket: "diemdanh-bantru.firebasestorage.app",
+  messagingSenderId: "64783667725",
+  appId: "1:64783667725:web:953a812eb9324429d67b44",
+  measurementId: "G-QWRBNFD2T5",
+};
+const appSync = getApps().some(a => a.name === "syncApp") 
+  ? getApp("syncApp") 
+  : initializeApp(firebaseConfigSync, "syncApp");
+const dbSync = getFirestore(appSync);
 
 export default function PhieuXuat() {
   // Context
   const { dataByDate } = useDataContext();
   const saveDataToContext = useSaveDataToContext();
 
-  // Local state (các state phiếu)
+  // Local state
   const [selectedDate, setSelectedDate] = useState(getStoredDate());
   const [rows, setRows] = useState([]);
-  
-  // 👉 loading chỉ dùng cho fetch nếu cần
   const [loading, setLoading] = useState(false);
-
-  // 👉 loadingSave dùng riêng cho tiến trình khi lưu
   const [loadingSave, setLoadingSave] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
-  // const [showAlert, setShowAlert] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
 
   const [soPhieu, setSoPhieu] = useState("02/01");
   const [nguoiNhan, setNguoiNhan] = useState("Đặng Thị Tuyết Nga");
   const [lyDoXuat, setLyDoXuat] = useState("Chế biến thực phẩm cho trẻ");
   const [xuatTaiKho, setXuatTaiKho] = useState("Tiểu học Bình Khánh");
-  const [soLuongHocSinh, setSoLuongHocSinh] = useState(250);
+  const [soLuongHocSinh, setSoLuongHocSinh] = useState(0);
 
   const [thuKho, setThuKho] = useState("Nguyễn Văn Tám");
   const [keToan, setKeToan] = useState("Lê Thị Thu Hương");
@@ -64,8 +86,76 @@ export default function PhieuXuat() {
     { label: "Thủ trưởng đơn vị", value: hieuTruong, setter: setHieuTruong },
   ];
 
+  const handleSync = async () => {
+    if (!selectedDate) {
+      setMessage("Chọn ngày trước khi đồng bộ");
+      setSuccess(false);
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 4000);
+      return;
+    }
+
+    try {
+      const docRef = doc(dbSync, "BANTRU_2024-2025", selectedDate.toISOString().split("T")[0]);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        const day = selectedDate.getDate().toString().padStart(2, "0");
+        const month = (selectedDate.getMonth() + 1).toString().padStart(2, "0");
+        const year = selectedDate.getFullYear();
+        setMessage(`Không tìm thấy số lượng học sinh bán trú ngày ${day}/${month}/${year}`);
+        setSuccess(false);
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 4000);
+        return;
+      }
+
+      const danhSachAn = docSnap.data().danhSachAn || [];
+      const soLuong = danhSachAn.length;
+
+      setSoLuongHocSinh(soLuong);
+      saveDataToContext(selectedDate, { soLuongHocSinh: soLuong });
+
+      const docId = format(selectedDate, "yyyy-MM-dd");
+      await setDoc(
+        doc(db, "INFO", docId),
+        { suatAn: soLuong, updatedAt: new Date().toISOString() },
+        { merge: true }
+      );
+
+      //setMessage(`✅ Đã đồng bộ số lượng học sinh với dữ liệu bán trú: ${soLuong}`);
+      setMessage(`✅ Đã đồng bộ số lượng học sinh với dữ liệu bán trú.`);
+      setSuccess(true);
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 4000);
+    } catch (error) {
+      console.error("Lỗi khi đồng bộ:", error);
+      setMessage("❌ Lỗi khi đồng bộ dữ liệu");
+      setSuccess(false);
+      setShowAlert(true);
+      setTimeout(() => setShowAlert(false), 4000);
+    }
+  };
+
+  // Cập nhật Firestore với số lượng học sinh truyền vào
+  const UpdateSoLuongHS = async (soLuong) => {
+    if (!selectedDate) return;
+    try {
+      const docId = format(selectedDate, "yyyy-MM-dd");
+      await setDoc(
+        doc(db, "INFO", docId),
+        { suatAn: soLuong, updatedAt: new Date().toISOString() },
+        { merge: true }
+      );
+      console.log(`✅ Đã cập nhật số lượng học sinh: ${soLuong}`);
+    } catch (err) {
+      console.error("❌ Lỗi khi cập nhật số lượng học sinh:", err);
+    }
+  };
+
+
   const textFieldStyle = {
-    width: 250, // hoặc "120px"
+    width: 250,
     "& .MuiInput-underline:before": {
       borderBottom: "1px solid transparent",
     },
@@ -82,7 +172,7 @@ export default function PhieuXuat() {
     setNguoiNhan("Đặng Thị Tuyết Nga");
     setLyDoXuat("Chế biến thực phẩm cho trẻ");
     setXuatTaiKho("Tiểu học Bình Khánh");
-    setSoLuongHocSinh(250);
+    setSoLuongHocSinh(0);
     setThuKho("Nguyễn Văn Tám");
     setKeToan("Lê Thị Thu Hương");
     setHieuTruong("Đặng Thái Bình");
@@ -94,10 +184,6 @@ export default function PhieuXuat() {
     try {
       const dateStr = date.toISOString().split("T")[0];
 
-      const { db } = await import("../firebase");
-      const { doc, getDoc } = await import("firebase/firestore");
-
-      // 🔹 Fetch DATA
       const dataRef = doc(db, "DATA", dateStr);
       const dataSnap = await getDoc(dataRef);
 
@@ -116,7 +202,6 @@ export default function PhieuXuat() {
           name: item.ten,
           unit: item.dvt,
           yeuCau: item.soLuong,
-          //thucXuat: item.soLuong,
           thucXuat: item.thucXuat !== undefined ? item.thucXuat : item.soLuong,
           donGia: item.donGia,
           thanhTien: item.thanhTien,
@@ -129,25 +214,24 @@ export default function PhieuXuat() {
         saveDataToContext(date, { phieuXuat: [] });
       }
 
-      // 🔹 Fetch INFO
       const infoRef = doc(db, "INFO", dateStr);
       const infoSnap = await getDoc(infoRef);
 
       if (infoSnap.exists()) {
         const infoData = infoSnap.data();
-        console.log("✅ INFO data:", infoData); // kiểm tra
+        console.log("✅ INFO data:", infoData);
 
         setSoPhieu(infoData.soPhieu || "02/01");
         setNguoiNhan(infoData.nguoiNhan || "Đặng Thị Tuyết Nga");
         setLyDoXuat(infoData.lyDo || "Chế biến thực phẩm cho trẻ");
         setXuatTaiKho(infoData.xuatTai || "Tiểu học Bình Khánh");
-        setSoLuongHocSinh(infoData.suatAn || 250);
+        setSoLuongHocSinh(infoData.suatAn || 0);
         setThuKho(infoData.thuKho || "Nguyễn Văn Tám");
         setKeToan(infoData.keToan || "Lê Thị Thu Hương");
         setHieuTruong(infoData.hieuTruong || "Đặng Thái Bình");
       } else {
         console.warn("⚠️ Không tìm thấy INFO cho ngày:", dateStr);
-        resetInfoToDefault(); // ✅ Thêm dòng này là xong!
+        resetInfoToDefault();
       }
     } catch (err) {
       console.error("[PhieuXuat] Lỗi khi fetch dữ liệu:", err);
@@ -156,7 +240,6 @@ export default function PhieuXuat() {
     setLoading(false);
   };
 
-  // Auto fetch khi selectedDate thay đổi
   useEffect(() => {
     fetchData(selectedDate);
   }, [selectedDate]);
@@ -187,7 +270,6 @@ export default function PhieuXuat() {
     setTotalText(numberToVietnameseText(newTotal));
   };
 
-  // Hàm xử lý khi bấm Cập nhật
   const handleUpdateData = async () => {
     setLoadingSave(true);
     setSuccess(false);
@@ -195,7 +277,6 @@ export default function PhieuXuat() {
     setMessage("");
 
     try {
-      // Giả lập tiến trình cập nhật (tăng dần từ 0 đến 100)
       for (let i = 0; i <= 100; i += 10) {
         await new Promise((r) => setTimeout(r, 80));
         setProgress(i);
@@ -203,7 +284,7 @@ export default function PhieuXuat() {
 
       const docId = format(selectedDate, "yyyy-MM-dd");
 
-      // ✅ Lưu thông tin học sinh vào "INFO"
+      // Lưu INFO
       await setDoc(doc(db, "INFO", docId), {
         soPhieu,
         nguoiNhan,
@@ -216,7 +297,7 @@ export default function PhieuXuat() {
         updatedAt: new Date().toISOString(),
       });
 
-      // ✅ Cập nhật lại số lượng và thành tiền vào "DATA"
+      // Lưu DATA (matHang)
       const dataRef = doc(db, "DATA", docId);
       const dataSnap = await getDoc(dataRef);
 
@@ -229,7 +310,6 @@ export default function PhieuXuat() {
           return matchedRow
             ? {
                 ...item,
-                //soLuong: matchedRow.thucXuat,
                 thucXuat: matchedRow.thucXuat,
                 thanhTien: matchedRow.thanhTien,
               }
@@ -238,6 +318,9 @@ export default function PhieuXuat() {
 
         await setDoc(dataRef, { matHang: updatedMatHang }, { merge: true });
       }
+
+      // ✅ Lưu số lượng học sinh vào context
+      saveDataToContext(selectedDate, { soLuongHocSinh });
 
       setMessage("✅ Đã lưu thông tin học sinh và cập nhật số lượng thành tiền!");
       setSuccess(true);
@@ -252,18 +335,17 @@ export default function PhieuXuat() {
 
   const keywordOrder = ["gạo", "đường", "dầu ăn", "nước mắm", "hạt nêm" ];
   const sortedRows = [...rows]
-    .sort((a, b) => {
-      const aIndex = keywordOrder.findIndex(keyword => a.name.toLowerCase().includes(keyword));
-      const bIndex = keywordOrder.findIndex(keyword => b.name.toLowerCase().includes(keyword));
-      return aIndex - bIndex;
-    })
-    .map((item, index) => ({
-      ...item,
-      stt: index + 1, // ✅ gán lại STT theo thứ tự mới
-    }));
+  .sort((a, b) => {
+    const aIndex = keywordOrder.findIndex(keyword => a.name.toLowerCase().includes(keyword));
+    const bIndex = keywordOrder.findIndex(keyword => b.name.toLowerCase().includes(keyword));
+    return aIndex - bIndex;
+  })
+  .map((item, index) => ({
+    ...item,
+    stt: index + 1,
+  }));
 
-
-   return (
+  return (
     <Box sx={{ pt: "20px", pb: 6, px: { xs: 1, sm: 2 }, bgcolor: "#e3f2fd", minHeight: "100vh" }}>
       <Card elevation={8} sx={{ maxWidth: 1100, mx: "auto", borderRadius: 3, overflow: "hidden" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -519,31 +601,54 @@ export default function PhieuXuat() {
               />
 
               <Typography component="span">Số lượng học sinh: </Typography>
-              <TextField
-                size="small"
-                type="number"
-                value={soLuongHocSinh}
-                onChange={(e) => setSoLuongHocSinh(Number(e.target.value))}
-                variant="standard"
-                InputProps={{
-                  sx: { fontWeight: 'bold' } // in đậm nội dung
-                }}
-                sx={{
-                  width: 100, // độ rộng cố định
-                  "& .MuiInputBase-root": {
-                    color: "red", // màu chữ
-                  },
-                  "& .MuiInput-underline:before": {
-                    borderBottom: "1px solid transparent",
-                  },
-                  "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
-                    borderBottom: "1px solid #ccc",
-                  },
-                  "& .MuiInput-underline:after": {
-                    borderBottom: "none",
-                  },
-                }}
-              />
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <TextField
+                    size="small"
+                    type="number"
+                    value={soLuongHocSinh}
+                    onChange={(e) => setSoLuongHocSinh(Number(e.target.value))}
+                    variant="standard"
+                    InputProps={{
+                      sx: { fontWeight: 'bold' } // in đậm nội dung
+                    }}
+                    sx={{
+                      width: 70, // độ rộng cố định
+                      "& .MuiInputBase-root": {
+                        color: "red", // màu chữ
+                      },
+                      "& .MuiInput-underline:before": {
+                        borderBottom: "1px solid transparent",
+                      },
+                      "& .MuiInput-underline:hover:not(.Mui-disabled):before": {
+                        borderBottom: "1px solid #ccc",
+                      },
+                      "& .MuiInput-underline:after": {
+                        borderBottom: "none",
+                      },
+                    }}
+                  />
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Tooltip title="Đồng bộ số liệu bán trú">
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSync}
+                        sx={{ fontSize: "0.75rem", minWidth: "40px", padding: "6px" }} // tuỳ chỉnh size button
+                      >
+                        <SyncIcon />
+                      </Button>
+                    </Tooltip>
+
+                    {showAlert && (
+                      <Box sx={{ display: "inline-block", mt: 0 }}>
+                        <Alert severity={success ? "success" : "error"} sx={{ px: 2 }}>
+                          {message}
+                        </Alert>
+                      </Box>
+                    )}
+                  </Box>
+
+                </Stack>
             </Box>
 
           {/* Bảng chi tiết */}

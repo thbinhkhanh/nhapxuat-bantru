@@ -46,7 +46,13 @@ export const useSaveDataToContext = () => {
     }
 
     const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
-    //console.log(`📥 [saveDataToContext] Đang lưu dữ liệu vào context cho ngày ${dateStr}:`, data);
+
+    // --- Thêm log số lượng học sinh ---
+    if (data.soLuongHocSinh !== undefined) {
+      console.log(`📊 [Context] Ngày ${dateStr} có số lượng học sinh:`, data.soLuongHocSinh);
+    } else {
+      console.log(`📊 [Context] Ngày ${dateStr} chưa có số lượng học sinh`);
+    }
 
     setDataByDate(prev => ({
       ...prev,

@@ -76,7 +76,22 @@ export default function TienAn() {
 
     // Nếu đã có cache
     if (dataByDate[dateStr]?.tienAn) {
-      setData(dataByDate[dateStr].tienAn);
+      const cachedData = dataByDate[dateStr];
+      const suatAn = cachedData.soLuongHocSinh || 0;
+
+      // Rebuild lại tableData từ cachedData.tienAn, chỉ cập nhật các dòng cần theo suatAn
+      const updatedTienAn = cachedData.tienAn.map(row => {
+        if (row.dienGiai === "Xuất ăn và tiêu chuẩn trong ngày") {
+          return { ...row, soLuong: suatAn, thanhTien: suatAn * 27000 };
+        }
+        if (row.dienGiai === "Được chi trong ngày") {
+          return { ...row, thanhTien: suatAn * 27000 };
+        }
+        return row;
+      });
+
+      setData(updatedTienAn);
+      console.log("Số lượng học sinh từ context:", suatAn);
       setLoading(false);
       setProgress(100);
       return;
