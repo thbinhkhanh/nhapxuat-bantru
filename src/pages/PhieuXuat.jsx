@@ -37,13 +37,12 @@ const db = getFirestore(app);
 
 // Firestore 2 chỉ dùng cho handleSync
 const firebaseConfigSync = {
-  apiKey: "AIzaSyDABUgzEzkd02WfAFU-hUuol_ZFRVo97YI",
-  authDomain: "diemdanh-bantru.firebaseapp.com",
-  projectId: "diemdanh-bantru",
-  storageBucket: "diemdanh-bantru.firebasestorage.app",
-  messagingSenderId: "64783667725",
-  appId: "1:64783667725:web:953a812eb9324429d67b44",
-  measurementId: "G-QWRBNFD2T5",
+  apiKey: "AIzaSyDAcbzsDsK0vg0tn8PvLM5JoUVABDenB70",
+  authDomain: "diemdanh-bantru-17d03.firebaseapp.com",
+  projectId: "diemdanh-bantru-17d03",
+  storageBucket: "diemdanh-bantru-17d03.firebasestorage.app",
+  messagingSenderId: "639395884521",
+  appId: "1:639395884521:web:ed052133d1c9ef8d1d6f78"
 };
 const appSync = getApps().some(a => a.name === "syncApp") 
   ? getApp("syncApp") 
