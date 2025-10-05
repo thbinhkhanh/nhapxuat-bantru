@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Box, Stack, Typography, Button, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow,
-  TextField, Paper, MenuItem, Select, IconButton,
+  TextField, Paper, IconButton,
   LinearProgress, Alert, Autocomplete
 } from "@mui/material";
 import { DeleteOutline } from "@mui/icons-material";
@@ -10,190 +10,75 @@ import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { vi } from "date-fns/locale";
 import { format } from "date-fns";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { app } from "../firebase";
-import { doc, setDoc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
-import UpdateIcon from '@mui/icons-material/Update'; // import icon bạn muốn
+import UpdateIcon from '@mui/icons-material/Update';
 
+// ✅ Import context
+import { useDanhMuc } from "../context/DanhMucContext";
 
 const db = getFirestore(app);
 
 export default function UpdateData() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-
-  const loaiOptions = [
-    //"Chọn loại",
-    "Rau củ, gia vị",
-    "Trái cây + tráng miệng",
-    "Trứng",
-    "Thịt heo",
-    "Thịt bò",
-    "Cá",
-    "Tôm",
-    "Thịt gà",
-    "Cua",
-    "Nhóm Xuất kho",
-    "Loại khác",
-  ];
-
-  const loaiMap = {
-    "Rau củ, gia vị": "L2",
-    "Trái cây + tráng miệng": "L3",
-    "Trứng": "L4",
-    "Thịt heo": "L5",
-    "Thịt bò": "L6",
-    "Cá": "L7",
-    "Tôm": "L8",
-    "Thịt gà": "L9",
-    "Cua": "L10",
-    "Nhóm Xuất kho": "L1",
-    "Loại khác": "L11",
-  };
-
-  const dvtOptions = [
-    "Kg", "Lít", "Chai", "Can", "Bình",
-    "Trái", "Quả", "Củ", "Bó", "Nắm",
-    "Cái", "Con", "Vỉ", "Hộp", "Gói", "Túi"
-  ];
-
-
-  const initialRows = Array.from({ length: 8 }, (_, i) => ({
-    stt: i + 1,
-    tenHang: "",
-    dvt: "",
-    sl: "",
-    donGia: "",
-    thanhTien: 0,
-    loai: "",
-  }));
-
-  const [rows, setRows] = useState(initialRows);
-
-  // trạng thái tiến trình & thông báo
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
+  const [danhMucSource, setDanhMucSource] = useState("Chưa tải");
 
-  // chuẩn hóa ĐVT: chữ cái đầu viết hoa
+  // ✅ Lấy danh mục từ context
+  const { danhMuc, fetchDanhMuc } = useDanhMuc();
+
+  // ✅ Khởi tạo bảng 8 dòng rỗng khi mount
+  useEffect(() => {
+    setRows(Array.from({ length: 8 }, (_, i) => ({
+      stt: i + 1,
+      maHang: "",
+      tenHang: "",
+      dvt: "",
+      sl: "",
+      donGia: "",
+      thanhTien: 0,
+      loai: "",
+    })));
+
+    // Nếu context rỗng thì fetch danh mục từ Firestore
+    if (!danhMuc || danhMuc.length === 0) {
+      //console.log("[UpdateData] Context rỗng → gọi fetchDanhMuc từ Firestore");
+      setDanhMucSource("Firestore (fetch mới)");
+      fetchDanhMuc();
+    } else {
+      //console.log("[UpdateData] ✅ Danh mục lấy từ context:", danhMuc.length, "mục");
+      setDanhMucSource("Context (cache)");
+    }
+  }, [danhMuc, fetchDanhMuc]);
+
   const formatDVT = (dvt) => {
     if (!dvt) return "";
     return dvt.charAt(0).toUpperCase() + dvt.slice(1).toLowerCase();
   };
 
-  const handleUpdate = async () => {
-  setLoading(true);
-  setProgress(0);
-  setMessage("");
-  setSuccess(false);
-  setShowAlert(false);
-
-  const filledRows = rows.filter(
-    (r) => r.tenHang || r.dvt || r.sl || r.donGia
-  );
-
-  if (filledRows.length === 0) {
-    setMessage("⚠️ Bảng chưa có dữ liệu!");
-    setSuccess(false);
-    setLoading(false);
-    setShowAlert(true);
-    return;
-  }
-
-  for (let r of filledRows) {
-    if (r.loai === "Chọn loại" || r.loai === "") {
-      setMessage(
-        `⚠️ Cần chọn loại thực phẩm cho hàng: ${r.tenHang || "(chưa nhập tên)"}`
-      );
-      setSuccess(false);
-      setLoading(false);
-      setShowAlert(true);
-      return;
-    }
-  }
-
-  const docId = format(selectedDate, "yyyy-MM-dd");
-  const matHangData = filledRows.map((r) => ({
-    ten: r.tenHang,
-    dvt: formatDVT(r.dvt), // ✅ chuẩn hóa ĐVT
-    soLuong: parseFloat(r.sl) || 0,
-    donGia: parseFloat(r.donGia) || 0,
-    thanhTien: r.thanhTien,
-    loai: loaiMap[r.loai] || r.loai,
-  }));
-
-  try {
-    // ✅ giả lập tiến trình
-    for (let i = 0; i < matHangData.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      setProgress(Math.round(((i + 1) / matHangData.length) * 100));
-    }
-
-    const docRef = doc(db, "DATA", docId);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      // ✅ nếu document ngày đã có → nối thêm vào mảng matHang
-      const data = docSnap.data();
-      const oldMatHang = data.matHang || [];
-
-      const newMatHang = [...oldMatHang, ...matHangData];
-
-      await updateDoc(docRef, {
-        matHang: newMatHang,
-        updatedAt: new Date().toISOString(),
-      });
-    } else {
-      // ✅ nếu chưa có thì tạo mới
-      await setDoc(docRef, {
-        matHang: matHangData,
-        updatedAt: new Date().toISOString(),
-      });
-    }
-
-    // ✅ đồng bộ KEYWORD_RULES
-    for (let item of matHangData) {
-      const loaiCode = item.loai; // ví dụ: L1, L2
-      if (!loaiCode) continue;
-
-      const keywordRef = doc(db, "KEYWORD_RULES", loaiCode);
-      const keywordSnap = await getDoc(keywordRef);
-
-      if (keywordSnap.exists()) {
-        const data = keywordSnap.data();
-        const keywords = data.keywords || [];
-
-        if (!keywords.includes(item.ten)) {
-          await updateDoc(keywordRef, {
-            keywords: arrayUnion(item.ten),
-            updatedAt: new Date().toISOString(),
-          });
-        }
-      } else {
-        await setDoc(keywordRef, {
-          keywords: [item.ten],
-          updatedAt: new Date().toISOString(),
-        });
-      }
-    }
-
-    setMessage("✅ Cập nhật dữ liệu thành công!");
-    setSuccess(true);
-  } catch (err) {
-    console.error("Lỗi khi cập nhật:", err);
-    setMessage("❌ Có lỗi xảy ra khi cập nhật dữ liệu!");
-    setSuccess(false);
-  } finally {
-    setLoading(false);
-    setShowAlert(true);
-  }
-};
-
-
+  // xử lý thay đổi dữ liệu ô
   const handleChange = (index, field, value) => {
     const newRows = [...rows];
-    newRows[index][field] = value;
+
+    if (field === "maHang") {
+      const found = danhMuc.find(item => item.id === value);
+      if (found) {
+        //console.log("[UpdateData] ✅ Match sản phẩm:", found);
+        newRows[index].maHang = found.id;
+        newRows[index].tenHang = found.name;
+        newRows[index].dvt = found.unit;
+        newRows[index].loai = found.group;
+      } else {
+        newRows[index].maHang = value;
+      }
+    } else {
+      newRows[index][field] = value;
+    }
 
     if (field === "sl" || field === "donGia") {
       const slNum = parseFloat(newRows[index].sl) || 0;
@@ -204,159 +89,298 @@ export default function UpdateData() {
     setRows(newRows);
   };
 
-    // ẩn thông báo sau 5s
-    useEffect(() => {
-      if (showAlert) {
-        const timer = setTimeout(() => {
-          setShowAlert(false);
-        }, 5000); // 5000ms = 5 giây
-        return () => clearTimeout(timer);
+  const handleUpdate = async () => {
+    setLoading(true);
+    setProgress(1); // 👉 bắt đầu từ 1% thay vì 0
+    setMessage("");
+    setSuccess(false);
+    setShowAlert(false);
+
+    const filledRows = rows.filter(r => r.tenHang || r.dvt || r.sl || r.donGia);
+    const rowsWithMissingData = filledRows.filter(r =>
+      !r.tenHang || !r.maHang || !r.dvt || !r.sl || !r.donGia
+    );
+
+    if (filledRows.length === 0) {
+      setMessage("⚠️ Bảng chưa có dữ liệu!");
+      setSuccess(false);
+      setLoading(false);
+      setShowAlert(true);
+      return;
+    }
+
+    if (rowsWithMissingData.length > 0) {
+      setMessage("⚠️ Một số hàng còn thiếu dữ liệu. Vui lòng nhập đầy đủ các cột!");
+      setSuccess(false);
+      setLoading(false);
+      setShowAlert(true);
+      return;
+    }
+
+    const docId = format(selectedDate, "yyyy-MM-dd");
+
+    // 🔹 chuẩn hoá dữ liệu mới (KHÔNG có trường loai)
+    const matHangData = filledRows.map(r => ({
+      maSP: r.maHang,
+      ten: r.tenHang,
+      dvt: formatDVT(r.dvt),
+      soLuong: parseFloat(r.sl) || 0,
+      donGia: parseFloat(r.donGia) || 0,
+      thanhTien:
+        r.thanhTien ??
+        (parseFloat(r.sl) || 0) * (parseFloat(r.donGia) || 0),
+    }));
+
+    try {
+      for (let i = 0; i < matHangData.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // 👉 luôn đảm bảo hiển thị >=1% cho đến khi đủ 100%
+        setProgress(Math.max(1, Math.round(((i + 1) / matHangData.length) * 100)));
+
+        const item = matHangData[i];
+
+        // 🔹 Kiểm tra DANHMUC và thêm mới nếu cần (có loai ở đây)
+        const danhMucRef = doc(db, "DANHMUC", item.maSP);
+        const danhMucSnap = await getDoc(danhMucRef);
+        if (!danhMucSnap.exists()) {
+          const originalRow = filledRows.find(r => r.maHang === item.maSP);
+          await setDoc(danhMucRef, {
+            id: item.maSP,
+            name: item.ten,
+            unit: item.dvt,
+            group: originalRow?.loai || "Loại khác",
+          });
+        }
       }
-    }, [showAlert]);
+
+      // 🔹 Cập nhật DATA (merge thay vì ghi đè)
+      const docRef = doc(db, "DATA", docId);
+      const docSnap = await getDoc(docRef);
+
+      let mergedMatHang = [];
+
+      if (docSnap.exists()) {
+        const oldData = docSnap.data().matHang || [];
+
+        const preserved = [];
+        const matHangMap = new Map();
+
+        oldData.forEach(item => {
+          if (item.maSP) {
+            matHangMap.set(item.maSP, item);
+          } else {
+            preserved.push(item);
+          }
+        });
+
+        matHangData.forEach(item => {
+          const existing = matHangMap.get(item.maSP);
+          if (existing) {
+            matHangMap.set(item.maSP, { ...existing, ...item });
+          } else {
+            matHangMap.set(item.maSP, item);
+          }
+        });
+
+        mergedMatHang = [...preserved, ...Array.from(matHangMap.values())];
+
+        await updateDoc(docRef, {
+          matHang: mergedMatHang,
+          updatedAt: new Date().toISOString(),
+        });
+      } else {
+        mergedMatHang = matHangData;
+        await setDoc(docRef, {
+          matHang: mergedMatHang,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      // 🔹 Cập nhật context DANHMUC sau khi thêm mới
+      if (typeof fetchDanhMuc === "function") {
+        await fetchDanhMuc();
+      }
+
+      setMessage("✅ Cập nhật dữ liệu thành công!");
+      setSuccess(true);
+    } catch (err) {
+      console.error("[UpdateData] ❌ Lỗi khi cập nhật:", err);
+      setMessage("❌ Có lỗi xảy ra khi cập nhật dữ liệu!");
+      setSuccess(false);
+    } finally {
+      setLoading(false);
+      setShowAlert(true);
+    }
+  };
+
+
+
+
+
+
+
+  // Hàm chuẩn hóa chữ cái
+  const formatText = (text) => {
+    if (!text) return "";
+    const lower = text.toLowerCase().trim();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  };
 
   return (
     <Box sx={{ pt: "20px", pb: 6, px: { xs: 1, sm: 2 }, bgcolor: "#e3f2fd", minHeight: "100vh" }}>
-      <Box sx={{ width: "100%", maxWidth: "75%", mx: "auto", p: 3, bgcolor: "#fff", borderRadius: 3, boxShadow: 3, overflowX: "auto" }}>
+      <Box sx={{ width: "100%", maxWidth: "90%", mx: "auto", p: 3, bgcolor: "#fff", borderRadius: 3, boxShadow: 3, overflowX: "auto" }}>
         <Typography variant="subtitle1" fontWeight="bold">TRƯỜNG TIỂU HỌC BÌNH KHÁNH</Typography>
-        <Typography variant="h5" align="center" fontWeight="bold" sx={{ color: "#1976d2", pb: 2, mt: 2 }}>
+        <Typography variant="h5" align="center" fontWeight="bold" sx={{ color: "#1976d2", mt: 2, pb: 2 }}>
           CẬP NHẬT DỮ LIỆU THỰC PHẨM
         </Typography>
 
-        <Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ my: 1 }}>
+        {/* ✅ Hiển thị trạng thái nguồn danh mục */}
+        {/*<Typography variant="body2" align="center" sx={{ mb: 1, color: "gray" }}>
+          Nguồn danh mục: <strong>{danhMucSource}</strong> ({danhMuc?.length || 0} sản phẩm)
+        </Typography>*/}
+
+        <Stack direction="row" spacing={2} justifyContent="center" sx={{ my: 1 }}>
           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
             <DatePicker
               label="Chọn ngày"
               value={selectedDate}
               onChange={(newValue) => setSelectedDate(newValue)}
-              slotProps={{
-                textField: {
-                  size: "small",
-                  sx: { width: 150, "& input": { textAlign: "center", fontSize: "0.80rem" }, "& .MuiOutlinedInput-notchedOutline": { border: "none" } },
-                },
-              }}
+              slotProps={{ textField: { size: "small", sx: { width: 150 } } }}
             />
           </LocalizationProvider>
-
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleUpdate}
-            startIcon={<UpdateIcon />} // thêm icon vào đây
-            sx={{ 
-              height: 33, 
-              px: 2.5, 
-              fontWeight: 'bold', 
-              fontSize: '0.80rem',
-              whiteSpace: 'nowrap' // giữ chữ liền dòng
-            }}
-          >
+          <Button variant="contained" color="primary" onClick={handleUpdate} startIcon={<UpdateIcon />}>
             Cập nhật
           </Button>
         </Stack>
 
         <TableContainer component={Paper} sx={{ overflowX: "auto", mt: 3 }}>
-          <Table size="small" sx={{ minWidth: 900 }}>
+          <Table size="small" sx={{ minWidth: 1000 }}>
             <TableHead>
-              <TableRow sx={{ bgcolor: "#1976d2", height: 45 }}> {/* tăng chiều cao tại đây */}
+              <TableRow sx={{ bgcolor: "#1976d2", height: 45 }}>
                 <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", width: 50 }}>STT</TableCell>
-                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", minWidth: 100 }}>TÊN HÀNG</TableCell>
+                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", width: 80 }}>MÃ HÀNG</TableCell>
+                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", minWidth: 150 }}>TÊN HÀNG</TableCell>
                 <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", width: 90 }}>ĐVT</TableCell>
                 <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", width: 90 }}>SỐ LƯỢNG</TableCell>
                 <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", width: 90 }}>ĐƠN GIÁ</TableCell>
                 <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", width: 90 }}>THÀNH TIỀN</TableCell>
-                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", width: 150 }}>LOẠI THỰC PHẨM</TableCell>
+                <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", width: 200 }}>LOẠI THỰC PHẨM</TableCell>
                 <TableCell align="center" sx={{ color: "#fff", fontWeight: "bold", width: 50 }}></TableCell>
               </TableRow>
             </TableHead>
+
             <TableBody>
               {rows.map((row, index) => (
-                <TableRow
-                  key={index}
-                  sx={{
-                    "&:hover": {
-                      backgroundColor: "#f5f5f5",
-                      "& .delete-btn": { visibility: "visible" }, // ✅ hiện nút xoá khi hover
-                    },
-                  }}
-                >
+                <TableRow key={index}>
                   <TableCell align="center">{row.stt}</TableCell>
-                  <TableCell sx={{ minWidth: 200 }}>
-                    <TextField
-                      variant="standard"
-                      value={row.tenHang}
-                      onChange={(e) => handleChange(index, "tenHang", e.target.value)}
-                      fullWidth
-                    />
-                  </TableCell>
+
+                  {/* MÃ HÀNG */}
                   <TableCell>
                     <Autocomplete
                       freeSolo
-                      options={dvtOptions}
-                      value={row.dvt || ""}
-                      onChange={(_, newValue) => handleChange(index, "dvt", newValue)}
-                      onInputChange={(_, newInputValue) => handleChange(index, "dvt", newInputValue)}
-                      renderInput={(params) => (
-                        <TextField {...params} variant="standard" fullWidth />
-                      )}
+                      options={danhMuc.map(item => item.id)}
+                      value={row.maHang || ""}
+                      onChange={(_, newValue) => handleChange(index, "maHang", newValue)}
+                      onInputChange={(_, newInputValue) => handleChange(index, "maHang", newInputValue)}
+                      renderInput={(params) => <TextField {...params} variant="standard" />}
                     />
                   </TableCell>
 
+                  {/* TÊN HÀNG */}
+                  <TableCell>
+                    <Autocomplete
+                      freeSolo
+                      options={danhMuc.map(item => item.name)}
+                      value={row.tenHang || ""}
+                      onChange={(_, newValue) => handleChange(index, "tenHang", newValue)}
+                      onInputChange={(_, newInputValue) => handleChange(index, "tenHang", newInputValue)}
+                      renderInput={(params) => <TextField {...params} variant="standard" />}
+                    />
+                  </TableCell>
+
+                  {/* ĐVT */}
+                  <TableCell>
+                    <Autocomplete
+                      freeSolo  // cho phép nhập tự do
+                      options={[...new Set(danhMuc.map(item => item.unit))]} // lấy danh sách ĐVT duy nhất từ danh mục
+                      value={row.dvt || ""}
+                      onChange={(_, newValue) => handleChange(index, "dvt", newValue)}
+                      onInputChange={(_, newInputValue) => handleChange(index, "dvt", newInputValue)}
+                      renderInput={(params) => <TextField {...params} variant="standard" />}
+                    />
+                  </TableCell>
+
+
+                  {/* SỐ LƯỢNG */}
                   <TableCell>
                     <TextField
                       variant="standard"
                       type="number"
                       value={row.sl}
                       onChange={(e) => handleChange(index, "sl", e.target.value)}
-                      sx={{ textAlign: "right", "& input": { textAlign: "right" } }}
                     />
                   </TableCell>
+
+                  {/* ĐƠN GIÁ */}
                   <TableCell>
                     <TextField
                       variant="standard"
                       value={row.donGia ? Number(row.donGia).toLocaleString() : ""}
-                      onChange={(e) => {
-                        const raw = e.target.value.replace(/,/g, ""); // bỏ dấu phẩy khi nhập
-                        handleChange(index, "donGia", raw);
-                      }}
-                      sx={{ textAlign: "right", "& input": { textAlign: "right" } }}
+                      onChange={(e) => handleChange(index, "donGia", e.target.value.replace(/,/g, ""))}
                     />
                   </TableCell>
 
+                  {/* THÀNH TIỀN */}
                   <TableCell align="right">
                     {row.thanhTien !== 0 ? row.thanhTien.toLocaleString() : ""}
                   </TableCell>
-                  <TableCell>
-                    <Select
-                      variant="standard"
-                      value={row.loai}
-                      onChange={(e) => handleChange(index, "loai", e.target.value)}
-                      fullWidth
-                    >
-                      {loaiOptions.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </Select>
+
+                  {/* LOẠI */}
+                  <TableCell sx={{ maxWidth: 250 }}>
+                    <Autocomplete
+                      freeSolo  // cho phép nhập tự do
+                      options={[...new Set(danhMuc.map(item => item.group)), "Loại khác"]} // lấy danh sách nhóm duy nhất từ danh mục
+                      value={row.loai || ""}
+                      onChange={(_, newValue) => handleChange(index, "loai", newValue)}
+                      onInputChange={(_, newInputValue) => handleChange(index, "loai", newInputValue)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          variant="standard"
+                          sx={{
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                          }}
+                        />
+                      )}
+                      ListboxProps={{
+                        style: {
+                          maxHeight: 250,
+                          overflowY: "auto",
+                          whiteSpace: "nowrap",
+                          overflowX: "auto"  // cho phép cuộn ngang khi tên dài
+                        }
+                      }}
+                      sx={{
+                        minWidth: 250,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis"
+                      }}
+                    />
                   </TableCell>
+
+                  {/* XÓA */}
                   <TableCell align="center">
                     <IconButton
                       size="small"
                       onClick={() => {
                         const newRows = [...rows];
-                        newRows[index] = {
-                          stt: newRows[index].stt,
-                          tenHang: "",
-                          dvt: "",
-                          sl: "",
-                          donGia: "",
-                          thanhTien: 0,
-                          loai: "Chọn loại",
-                        };
+                        newRows[index] = { ...newRows[index], maHang: "", tenHang: "", dvt: "", sl: "", donGia: "", thanhTien: 0, loai: "" };
                         setRows(newRows);
                       }}
-                      sx={{ visibility: "hidden", "&:hover": { color: "red" } }}
-                      className="delete-btn" // ✅ dùng class để điều khiển hover
+                      sx={{ "&:hover": { color: "red" } }}
                     >
                       <DeleteOutline />
                     </IconButton>
@@ -364,29 +388,32 @@ export default function UpdateData() {
                 </TableRow>
               ))}
             </TableBody>
-
           </Table>
         </TableContainer>
 
-        {/* Thanh tiến trình + Thông báo */}
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mt: 3 }}>
-          {loading && (
-            <Box sx={{ width: "100%", maxWidth: 300, mt: 1 }}>
-              <LinearProgress variant="determinate" value={progress} />
-              <Typography variant="caption" color="text.secondary" align="center" sx={{ mt: 1 }}>
-                Đang cập nhật dữ liệu... ({progress}%)
-              </Typography>
-            </Box>
-          )}
+        {loading && (
+          <Box sx={{ width: "100%", maxWidth: 300, mt: 2, mx: "auto" }}>
+            <LinearProgress 
+              variant="determinate" 
+              value={progress} 
+              sx={{ height: 3, borderRadius: 2 }}
+            />
+            <Typography 
+              variant="caption" 
+              color="text.secondary" 
+              align="center" 
+              sx={{ mt: 0.5 }}
+            >
+              Đang cập nhật dữ liệu... ({progress}%)
+            </Typography>
+          </Box>
+        )}
 
-          {showAlert && (
-            <Box sx={{ display: "inline-block", mt: 0 }}>
-              <Alert severity={success ? "success" : "error"} sx={{ px: 2 }}>
-                {message}
-              </Alert>
-            </Box>
-          )}
-        </Box>
+        {showAlert && (
+          <Alert severity={success ? "success" : "error"} sx={{ mt: 2 }}>
+            {message}
+          </Alert>
+        )}
       </Box>
     </Box>
   );

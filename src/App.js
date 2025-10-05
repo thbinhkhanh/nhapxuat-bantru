@@ -31,6 +31,9 @@ import UpdateType from './pages/UpdateType';
 // Import DataProvider
 import { DataProvider } from './context/DataContext';
 import { UpdateTypeProvider, useUpdateType } from './context/UpdateTypeContext'; // ✅ import provider
+import { DanhMucProvider } from "./context/DanhMucContext";
+import { InfoProvider } from "./context/InfoContext"; // ✅ import mới
+
 
 function AppContent() {
   const location = useLocation();
@@ -42,7 +45,7 @@ function AppContent() {
     { path: '/chicho', label: 'Chi chợ' },
     { path: '/tienan', label: 'Tiền ăn' },
     { path: '/nhapphieu', label: 'Nhập phiếu' },
-    //{ path: '/danhmuc', label: 'Danh mục' },
+    { path: '/danhmuc', label: 'Danh mục' },
     { path: '/capnhat', label: 'Cập nhật' },
     { path: '/phanloai', label: 'Phân loại' },
   ];
@@ -154,7 +157,7 @@ function AppContent() {
             element={<ImportDataWithRedirect />}
           />
 
-          {/*<Route path="/danhmuc" element={<ImportDanhMuc onBack={() => window.history.back()} />} />*/}
+          <Route path="/danhmuc" element={<ImportDanhMuc onBack={() => window.history.back()} />} />
           <Route path="/capnhat" element={<UpdateData />} />
           <Route path="/phanloai" element={<UpdateType />} />
         </Routes>
@@ -185,9 +188,13 @@ export default function App() {
   return (
     <DataProvider>
       <UpdateTypeProvider>
-        <Router>
-          <AppContent />
-        </Router>
+        <DanhMucProvider>
+          <InfoProvider>  {/* ✅ Thêm InfoProvider */}
+            <Router>
+              <AppContent />
+            </Router>
+          </InfoProvider>
+        </DanhMucProvider>
       </UpdateTypeProvider>
     </DataProvider>
   );

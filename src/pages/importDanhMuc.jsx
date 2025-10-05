@@ -1,12 +1,19 @@
 import React, { useState } from "react";
 import {
-  Box, Typography, Card, Button, Alert, Stack, LinearProgress
+  Box,
+  Typography,
+  Card,
+  Button,
+  Alert,
+  Stack,
+  LinearProgress
 } from "@mui/material";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import UploadFileIcon from "@mui/icons-material/UploadFile";   // 📂 icon chọn file
+import CloudUploadIcon from "@mui/icons-material/CloudUpload"; // ☁️ icon upload
 import { motion } from "framer-motion";
 
-import { importDanhMuc } from "../utils/importDanhMuc";
+import { importDanhMuc } from "../utils/importDanhMuc"; // xử lý Excel + batch.commit
+import { useDanhMuc } from "../context/DanhMucContext"; // 👈 dùng context
 
 export default function ImportDanhMuc({ onBack }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -15,6 +22,10 @@ export default function ImportDanhMuc({ onBack }) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  // Context
+  const { danhMuc, fetchDanhMuc, setDanhMuc } = useDanhMuc();
+
+  // --- Chọn file Excel ---
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file && file.name.endsWith(".xlsx")) {
@@ -28,6 +39,7 @@ export default function ImportDanhMuc({ onBack }) {
     }
   };
 
+  // --- Upload & Import ---
   const handleUpload = async () => {
     if (!selectedFile) {
       setMessage("❗ Chưa chọn file!");
@@ -36,11 +48,24 @@ export default function ImportDanhMuc({ onBack }) {
     }
 
     setLoading(true);
-    setMessage("🔄 Đang xử lý file...");
+    setMessage("🔄 Đang import dữ liệu (batch)...");
     setProgress(0);
 
     try {
-      const result = await importDanhMuc(selectedFile, setProgress);
+      let existingDanhMuc = danhMuc;
+
+      // Nếu context chưa có dữ liệu thì tải từ Firestore
+      if (!existingDanhMuc || existingDanhMuc.length === 0) {
+        await fetchDanhMuc();
+        existingDanhMuc = danhMuc;
+      }
+
+      // Import Excel và chỉ thêm mới (so sánh với existingDanhMuc)
+      const result = await importDanhMuc(selectedFile, setProgress, existingDanhMuc);
+
+      // Sau khi import thành công, cập nhật lại context + storage
+      await fetchDanhMuc();
+
       setMessage(result);
       setSuccess(true);
     } catch (err) {
@@ -55,28 +80,15 @@ export default function ImportDanhMuc({ onBack }) {
   return (
     <Box sx={{ pt: "20px", pb: 6, px: { xs: 1, sm: 2 }, bgcolor: "#e3f2fd", minHeight: "100vh" }}>
       <Box maxWidth={480} mx="auto">
-        <Card elevation={8} sx={{ p: 4, borderRadius: 4, mt: 0 }}>
-          <Typography
-            variant="h5"
-            color="primary"
-            fontWeight="bold"
-            align="center"
-            gutterBottom
-          >
-            KEYWORD RULES
+        <Card elevation={8} sx={{ p: 4, borderRadius: 4 }}>
+          <Typography variant="h5" color="primary" fontWeight="bold" align="center" gutterBottom>
+            DANH MỤC HÀNG HÓA
           </Typography>
-          <Box
-            sx={{
-              height: "2px",
-              width: "100%",
-              backgroundColor: "#1976d2",
-              borderRadius: 1,
-              mt: 2,
-              mb: 4,
-            }}
-          />
+
+          <Box sx={{ height: "2px", width: "100%", backgroundColor: "#1976d2", borderRadius: 1, mt: 2, mb: 4 }} />
 
           <Stack spacing={2}>
+            {/* Nút chọn file */}
             <Button
               variant="outlined"
               component="label"
@@ -93,6 +105,7 @@ export default function ImportDanhMuc({ onBack }) {
               </Typography>
             )}
 
+            {/* Nút upload */}
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 fullWidth
@@ -103,10 +116,11 @@ export default function ImportDanhMuc({ onBack }) {
                 sx={{ fontWeight: "bold", height: 40 }}
                 disabled={loading}
               >
-                {loading ? "🔄 Đang tải lên..." : "Tải lên"}
+                {loading ? "🔄 Đang tải lên (batch)..." : "Tải lên"}
               </Button>
             </motion.div>
 
+            {/* Progress */}
             {loading && (
               <>
                 <LinearProgress variant="determinate" value={progress} />
@@ -122,7 +136,6 @@ export default function ImportDanhMuc({ onBack }) {
               </Alert>
             )}
 
-            {/* Nút quay lại giống mẫu */}
             <Button fullWidth onClick={onBack} color="secondary" sx={{ mt: 1 }}>
               ⬅️ Quay lại
             </Button>

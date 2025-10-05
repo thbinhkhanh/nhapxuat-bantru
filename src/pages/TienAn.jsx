@@ -1,40 +1,45 @@
 import React, { useState, useEffect } from "react";
 import {
   Box, Stack, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Card, CardContent, Divider, Button, TextField
+  TableHead, TableRow, Paper, Card, CardContent, Divider, Button, TextField,
+  LinearProgress, Tooltip, IconButton
 } from "@mui/material";
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { vi } from "date-fns/locale";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { format } from "date-fns";
-import { useDataContext, useSaveDataToContext } from "../context/DataContext";
-import { LinearProgress } from "@mui/material";
+import { useDataContext, useSaveDataToContext, useGetDataByDate } from "../context/DataContext";
+import { useDanhMuc } from "../context/DanhMucContext"; // thêm import
+import { useContext } from "react";
+import { useInfo } from "../context/InfoContext";
+
+import UpdateIcon from "@mui/icons-material/Update";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { exportPhieuTienAn } from "../utils/exportPhieuTienAn";
-
-
-import UpdateIcon from "@mui/icons-material/Update";         // ✅ icon cập nhật
-import FileDownloadIcon from "@mui/icons-material/FileDownload"; // ✅ icon excel/download
-import { Tooltip, IconButton } from "@mui/material";
-
-
-
-// ✅ Dùng chung dateStorage
 import { getStoredDate, setStoredDate } from "../utils/dateStorage";
+import { useNavigate } from "react-router-dom";
 
 export default function TienAn() {
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(getStoredDate());
   const { dataByDate } = useDataContext();
-  const saveDataToContext = useSaveDataToContext(); 
-  const [suatAn, setSuatAn] = useState(0);
+  const saveDataToContext = useSaveDataToContext();
+  const [loading, setLoading] = useState(false);
   const [loadingSave, setLoadingSave] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false); 
-  
+  const [success, setSuccess] = useState(false);
+  const { danhMuc, setDanhMuc, fetchDanhMuc } = useDanhMuc();
+  const { infoByDate, saveInfoToContext } = useInfo();
+
+
+
+  // ✅ Lấy dữ liệu từ context
+  const contextData = useGetDataByDate(selectedDate);
+
   const headCell = {
     backgroundColor: "#1976d2 !important",
     color: "#fff !important",
@@ -45,174 +50,174 @@ export default function TienAn() {
     borderRight: "1px solid rgba(255,255,255,0.2)",
   };
 
-  // ✅ Đồng bộ giữa các tab
+  // Đồng bộ dateAcrossTabs
   useEffect(() => {
     const syncDateAcrossTabs = (e) => {
-      if (e.key === "selectedDate") {
-        setSelectedDate(getStoredDate());
-      }
+      if (e.key === "selectedDate") setSelectedDate(getStoredDate());
     };
     window.addEventListener("storage", syncDateAcrossTabs);
-    return () => {
-      window.removeEventListener("storage", syncDateAcrossTabs);
-    };
+    return () => window.removeEventListener("storage", syncDateAcrossTabs);
   }, []);
 
-  // ✅ Lưu vào localStorage khi ngày đổi
   useEffect(() => {
-    if (selectedDate) {
-      setStoredDate(selectedDate);
-    }
+    if (selectedDate) setStoredDate(selectedDate);
   }, [selectedDate]);
 
-  // ✅ Hàm fetch data riêng để tái sử dụng khi bấm "Cập nhật"
-  const fetchData = async () => {
-    if (!selectedDate) return;
+  // Hàm normalize
+  const normalize = (str) =>
+    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-    setLoading(true);
-    setProgress(0);
+  // Fetch data
+const fetchData = async () => {
+  if (!selectedDate) return;
+  setLoading(true);
+  setProgress(0);
 
-    const dateStr = selectedDate.toISOString().split("T")[0];
+  const dateStr = selectedDate.toISOString().split("T")[0];
 
-    // Nếu đã có cache
-    if (dataByDate[dateStr]?.tienAn) {
-      const cachedData = dataByDate[dateStr];
-      const suatAn = cachedData.soLuongHocSinh || 0;
+  try {
+    let matHang = [];
+    let danhMucMap = {};
+    let suatAn = 0;
+    let chenhLechDauNgay = 0;
 
-      // Rebuild lại tableData từ cachedData.tienAn, chỉ cập nhật các dòng cần theo suatAn
-      const updatedTienAn = cachedData.tienAn.map(row => {
-        if (row.dienGiai === "Xuất ăn và tiêu chuẩn trong ngày") {
-          return { ...row, soLuong: suatAn, thanhTien: suatAn * 27000 };
+    // ✅ Lấy danh mục từ context useDanhMuc hoặc Firestore
+    if (danhMuc && danhMuc.length > 0) {
+      //console.log("✅ Sử dụng danh mục từ context");
+      danhMuc.forEach(dm => {
+        danhMucMap[dm.id] = dm.group || "Loại khác";
+      });
+    } else {
+      //console.log("🌐 Fetch danh mục từ Firestore");
+      const danhMucSnap = await getDocs(collection(db, "DANHMUC"));
+      const fetchedDanhMuc = danhMucSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      if (fetchedDanhMuc.length > 0) {
+        //console.log(`✅ Cập nhật ${fetchedDanhMuc.length} danh mục vào context`);
+        fetchedDanhMuc.forEach(dm => {
+          danhMucMap[dm.id] = dm.group || "Loại khác";
+        });
+        setDanhMuc(fetchedDanhMuc); // ✅ lưu vào context
+      } else {
+        console.warn("⚠️ Không có danh mục nào được tìm thấy trong Firestore");
+      }
+    }
+
+    // ✅ Ưu tiên lấy data từ DataContext nếu có
+    if (contextData?.matHang && contextData?.danhMucMap) {
+      matHang = contextData.matHang;
+      danhMucMap = contextData.danhMucMap;
+      suatAn = contextData.suatAn || 0;
+      chenhLechDauNgay = contextData.chenhLechDauNgay || 0;
+      setProgress(70);
+    } else {
+      // Lấy suatAn từ InfoContext nếu có
+      const infoData = infoByDate?.[dateStr];
+      if (infoData?.suatAn !== undefined) {
+        suatAn = infoData.suatAn;
+      } else {
+        const infoSnap = await getDoc(doc(db, "INFO", dateStr));
+        if (infoSnap.exists()) {
+          suatAn = infoSnap.data().suatAn || 0;
+          saveInfoToContext(selectedDate, infoSnap.data());
         }
-        if (row.dienGiai === "Được chi trong ngày") {
-          return { ...row, thanhTien: suatAn * 27000 };
-        }
-        return row;
+      }
+      setProgress(20);
+
+      // Fetch CHENHLECH
+      const chenhSnap = await getDoc(doc(db, "CHENHLECH", dateStr));
+      if (chenhSnap.exists()) chenhLechDauNgay = chenhSnap.data().chenhLechDauNgay || 0;
+      setProgress(40);
+
+      // Fetch DATA
+      const dataSnap = await getDoc(doc(db, "DATA", dateStr));
+      if (dataSnap.exists()) matHang = dataSnap.data().matHang || [];
+      setProgress(60);
+
+      saveDataToContext(selectedDate, { matHang, danhMucMap, suatAn, chenhLechDauNgay });
+      setProgress(70);
+    }
+
+    // ✅ Build tableData (giữ nguyên)
+    const keywordsXuatKho = ["đường biên hòa", "gạo", "dầu tường an", "hạt nêm", "nước mắm"];
+    const tableData = [];
+    let sttCounter = 1;
+
+    tableData.push({ stt: sttCounter++, dienGiai: "Chênh lệch đầu ngày", isLoaiRow: true, thanhTien: chenhLechDauNgay });
+    tableData.push({ stt: sttCounter++, dienGiai: "Xuất ăn và tiêu chuẩn trong ngày", isLoaiRow: true, soLuong: suatAn, thanhTien: suatAn * 27000 });
+    tableData.push({ stt: sttCounter++, dienGiai: "Được chi trong ngày", isLoaiRow: true, thanhTien: suatAn * 27000 });
+
+    const tongChiHang = matHang.reduce((acc, m) => acc + (m.thanhTien || 0), 0);
+    tableData.push({ stt: sttCounter++, dienGiai: "Đã chi trong ngày", isLoaiRow: true, thanhTien: tongChiHang });
+
+    const xuatKhoItems = matHang.filter(m => keywordsXuatKho.some(k => normalize(m.ten).includes(normalize(k))));
+    if (xuatKhoItems.length > 0) {
+      const xuatKhoTotal = xuatKhoItems.reduce((acc, m) => acc + (m.thanhTien || 0), 0);
+      tableData.push({ stt: "", dienGiai: "Xuất kho", isLoaiRow: true, thanhTien: xuatKhoTotal });
+      xuatKhoItems.forEach(m => tableData.push({ stt: "", dienGiai: m.ten, dvt: m.dvt, soLuong: m.soLuong, donGia: m.donGia, thanhTien: m.thanhTien, isLoaiRow: false }));
+    }
+
+    const chiChoItems = matHang.filter(m => !xuatKhoItems.includes(m));
+    if (chiChoItems.length > 0) {
+      const chiChoGroups = {};
+      chiChoItems.forEach(m => {
+        const group = danhMucMap[m.maSP] || "Loại khác";
+        if (!chiChoGroups[group]) chiChoGroups[group] = [];
+        chiChoGroups[group].push(m);
       });
 
-      setData(updatedTienAn);
-      //console.log("Số lượng học sinh từ context:", suatAn);
-      setLoading(false);
-      setProgress(100);
-      return;
+      const chiChoTotal = chiChoItems.reduce((acc, m) => acc + (m.thanhTien || 0), 0);
+      tableData.push({ stt: "", dienGiai: "Chi chợ", isLoaiRow: true, thanhTien: chiChoTotal });
+
+      Object.keys(chiChoGroups).forEach(groupName => {
+        const items = chiChoGroups[groupName];
+        const groupTotal = items.reduce((acc, m) => acc + (m.thanhTien || 0), 0);
+        tableData.push({ stt: "", dienGiai: groupName, isLoaiRow: true, thanhTien: groupTotal });
+
+        items.forEach(m => tableData.push({ stt: "", dienGiai: m.ten, dvt: m.dvt, soLuong: m.soLuong, donGia: m.donGia, thanhTien: m.thanhTien, isLoaiRow: false }));
+      });
     }
 
-    try {
-      // 1️⃣ Fetch INFO
-      let suatAn = 0;
-      try {
-        const infoRef = doc(db, "INFO", dateStr);
-        const infoSnap = await getDoc(infoRef);
-        if (infoSnap.exists()) {
-          const infoData = infoSnap.data();
-          suatAn = infoData.suatAn || 0;
-        }
-        setProgress(20);
-      } catch (err) {
-        console.error("❌ Lỗi khi fetch INFO:", err);
-        setProgress(20);
-      }
+    tableData.push({ stt: sttCounter, dienGiai: "Chênh lệch cuối ngày", isLoaiRow: true, thanhTien: -tongChiHang });
 
-      // 2️⃣ Fetch CHENHLECH
-      let chenhLechDauNgay = 0;
-      try {
-        const chenhRef = doc(db, "CHENHLECH", dateStr);
-        const chenhSnap = await getDoc(chenhRef);
-        if (chenhSnap.exists()) {
-          const chenhData = chenhSnap.data();
-          chenhLechDauNgay = chenhData.chenhLechDauNgay || 0;
-        }
-        setProgress(40);
-      } catch (err) {
-        console.error("❌ Lỗi khi fetch CHENHLECH:", err);
-        setProgress(40);
-      }
+    setData(tableData);
+    saveDataToContext(selectedDate, { tienAn: tableData });
+    setProgress(100);
+  } catch (err) {
+    console.error("❌ Lỗi fetchData:", err);
+    setProgress(100);
+  } finally {
+    setLoading(false);
+  }
+};
 
-      // 3️⃣ Fetch DATA
-      const docRef = doc(db, "DATA", dateStr);
-      const docSnap = await getDoc(docRef);
-      setProgress(70);
 
-      if (docSnap.exists()) {
-        const docData = docSnap.data();
-        const matHang = Array.isArray(docData.matHang) ? docData.matHang : [];
-        saveDataToContext(selectedDate, { ...docData });
 
-        const loaiNames = { L1: "Xuất kho", L2: "Rau củ, gia vị", L3: "Trái cây + tráng miệng",
-          L4: "Trứng", L5: "Thịt heo", L6: "Thịt bò", L7: "Cá", L8: "Tôm",
-          L9: "Thịt gà", L10: "Cua", L11: "Loại khác"
-        };
-        const loaiOrder = ["L1","L2","L3","L4","L5","L6","L7","L8","L9","L10","L11"];
-        let sttCounter = 1;
-        const tableData = [];
 
-        tableData.push({ stt: sttCounter++, dienGiai: "Chênh lệch đầu ngày", isLoaiRow: true, thanhTien: chenhLechDauNgay });
-        tableData.push({ stt: sttCounter++, dienGiai: "Xuất ăn và tiêu chuẩn trong ngày", isLoaiRow: true, soLuong: suatAn, thanhTien: suatAn*27000 });
-        tableData.push({ stt: sttCounter++, dienGiai: "Được chi trong ngày", isLoaiRow: true, thanhTien: suatAn*27000 });
-        tableData.push({ stt: sttCounter++, dienGiai: "Đã chi trong ngày", isLoaiRow: true, thanhTien: matHang.reduce((acc,m)=>acc+(m.thanhTien||0),0) });
 
-        const loaiMap = {};
-        matHang.forEach(m => { const l = m.loai||"L11"; if(!loaiMap[l]) loaiMap[l]=[]; loaiMap[l].push(m); });
-        loaiOrder.forEach(loaiKey => {
-          const items = loaiMap[loaiKey]; if(!items) return;
-          tableData.push({ stt:"", dienGiai:loaiNames[loaiKey], isLoaiRow:true, thanhTien: items.reduce((acc,m)=>acc+(m.thanhTien||0),0) });
-          items.forEach(m => tableData.push({ stt:"", dienGiai:m.ten, dvt:m.dvt, soLuong:m.soLuong, donGia:m.donGia, thanhTien:m.thanhTien, isLoaiRow:false }));
-          if(loaiKey==="L1") {
-            const chiCho = matHang.filter(m=>m.loai&&m.loai!=="L1").reduce((acc,m)=>acc+(m.thanhTien||0),0);
-            tableData.push({ stt:"", dienGiai:"Chi chợ", isLoaiRow:true, thanhTien: chiCho });
-          }
-        });
 
-        const tongChi = matHang.reduce((acc,m)=>acc+(m.thanhTien||0),0);
-        tableData.push({ stt:sttCounter, dienGiai:"Chênh lệch cuối ngày", isLoaiRow:true, thanhTien: -tongChi });
-
-        setData(tableData);
-        saveDataToContext(selectedDate, { tienAn: tableData });
-        setProgress(100);
-      } else {
-        console.warn(`[TienAn] Không tìm thấy dữ liệu ngày ${dateStr} trong Firestore`);
-        setData([]);
-        saveDataToContext(selectedDate, { tienAn: [] });
-        setProgress(100);
-      }
-    } catch (err) {
-      console.error("❌ Lỗi fetchData:", err);
-      setProgress(100);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  useEffect(() => {
+    fetchData();
+  }, [selectedDate]);
 
   const handleUpdateChenhLech = async () => {
     if (!selectedDate) return;
-
     setLoadingSave(true);
+    setMessage("");
     setSuccess(false);
     setProgress(0);
-    setMessage("");
 
     try {
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise((r) => setTimeout(r, 80));
-        setProgress(i);
-      }
-
       const docId = format(selectedDate, "yyyy-MM-dd");
-
-      const chenhlechDau = data.find(
-        (item) => item.dienGiai === "Chênh lệch đầu ngày"
-      )?.thanhTien || 0;
-
+      const chenhlechDau = data.find(item => item.dienGiai === "Chênh lệch đầu ngày")?.thanhTien || 0;
       await setDoc(doc(db, "CHENHLECH", docId), {
         chenhLechDauNgay: chenhlechDau,
         updatedAt: new Date().toISOString(),
       });
-
-      setMessage("✅ Đã cập nhật Chênh lệch đầu ngày thành công!");
+      setMessage("✅ Cập nhật thành công!");
       setSuccess(true);
     } catch (err) {
-      console.error("Lỗi khi cập nhật CHENHLECH:", err);
+      console.error(err);
       setMessage("❌ Lỗi khi cập nhật dữ liệu!");
       setSuccess(false);
     } finally {
@@ -220,35 +225,9 @@ export default function TienAn() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [selectedDate]);
-
-  useEffect(() => {
-    if (data.length === 0) return;
-
-    setData(prevData => {
-      let changed = false;
-      const newData = prevData.map(d => ({ ...d })); // clone object
-
-      const duocChiIndex = newData.findIndex(d => d.dienGiai === "Được chi trong ngày");
-      const daChiIndex = newData.findIndex(d => d.dienGiai === "Đã chi trong ngày");
-      const chenhlechCuoiIndex = newData.findIndex(d => d.dienGiai === "Chênh lệch cuối ngày");
-
-      if (duocChiIndex !== -1 && daChiIndex !== -1 && chenhlechCuoiIndex !== -1) {
-        const duocChi = newData[duocChiIndex].thanhTien || 0;
-        const daChi = newData[daChiIndex].thanhTien || 0;
-        const newValue = duocChi - daChi;
-
-        if (newData[chenhlechCuoiIndex].thanhTien !== newValue) {
-          newData[chenhlechCuoiIndex].thanhTien = newValue;
-          changed = true;
-        }
-      }
-
-      return changed ? newData : prevData; // chỉ set nếu thực sự thay đổi
-    });
-  }, [data]);
+  const goToOtherPage = () => {
+    navigate("/other-page"); // <-- thay đường dẫn bạn muốn
+  };
   
   return (
     <Box sx={{ pt: "20px", pb: 6, px: { xs: 1, sm: 2 }, bgcolor: "#e3f2fd", minHeight: "100vh" }}>

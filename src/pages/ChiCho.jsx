@@ -6,10 +6,14 @@ import {
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { vi } from "date-fns/locale";
-import { doc, getDoc } from "firebase/firestore";
+//import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocs, collection } from "firebase/firestore";
+
 import { db } from "../firebase";
 import { getStoredDate, setStoredDate } from "../utils/dateStorage"; // dùng dateStorage
 import { useDataContext, useSaveDataToContext } from "../context/DataContext";
+import { useDanhMuc } from "../context/DanhMucContext";
+
 import LinearProgress from '@mui/material/LinearProgress';
 import { exportPhieuChiCho } from "../utils/exportPhieuChiCho";
 
@@ -26,6 +30,7 @@ export default function ChiCho() {
   const saveDataToContext = useSaveDataToContext();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const { danhMuc, setDanhMuc, fetchDanhMuc } = useDanhMuc();
 
   useEffect(() => {
     if (selectedDate) {
@@ -34,157 +39,146 @@ export default function ChiCho() {
   }, [selectedDate]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!selectedDate) {
-        console.warn("[ChiCho] selectedDate null/undefined → bỏ qua fetch");
-        return;
-      }
+    const fetchChiCho = async () => {
+      if (!selectedDate) return;
 
-      setLoading(true);       // 🔹 Bắt đầu loading
-      setProgress(10);        // 🔹 Set progress khởi đầu
+      setLoading(true);
+      setProgress(0);
 
-      //console.log("[ChiCho] selectedDate =", selectedDate, "instanceof Date?", selectedDate instanceof Date);
-
-      const yyyy = selectedDate.getFullYear();
-      const mm = String(selectedDate.getMonth() + 1).padStart(2, "0");
-      const dd = String(selectedDate.getDate()).padStart(2, "0");
-      const dateStr = `${yyyy}-${mm}-${dd}`;
-
-      //console.log(`[ChiCho] Đang xử lý ngày: ${dateStr}`);
-
-      if (dataByDate[dateStr]?.chiCho) {
-        //console.log(`[ChiCho] ✅ Dữ liệu ngày ${dateStr} lấy từ context:`, dataByDate[dateStr].chiCho);
-        setData(dataByDate[dateStr].chiCho.tableData);
-        setTongCong(dataByDate[dateStr].chiCho.tongCong);
-        setProgress(100);    // 🔹 Hoàn tất
-        setLoading(false);   // 🔹 Kết thúc loading
-        return;
-      }
+      const dateStr = selectedDate.toISOString().split("T")[0];
 
       try {
-        //console.log(`[ChiCho] 🔄 Fetch Firestore: DATA/${dateStr}`);
-        const docRef = doc(db, "DATA", dateStr);
-        const docSnap = await getDoc(docRef);
-        setProgress(50);      // 🔹 Fetch xong, đang xử lý dữ liệu
+        let matHang = [];
+        let danhMucMap = {};
 
-        if (docSnap.exists()) {
-          const docData = docSnap.data();
-          //console.log(`[ChiCho] ✅ Firestore trả về DATA/${dateStr}:`, docData);
-
-          const matHang = Array.isArray(docData.matHang) ? docData.matHang : [];
-          //console.log("[ChiCho] Danh sách mặt hàng:", matHang);
-
-          saveDataToContext(selectedDate, { ...docData });
-          //console.log("[ChiCho] 👉 Đã save toàn bộ docData vào context");
-
-          const allowedKeywords = ["Đường cát", "Gạo", "Dầu ăn", "Hạt nêm", "Nước mắm"];
-
-          const loaiMap = {};
-          matHang.forEach((m) => {
-            const l = m.loai || "Khác";
-            if (!loaiMap[l]) loaiMap[l] = [];
-            loaiMap[l].push(m);
+        // ✅ Lấy danh mục từ context hoặc Firestore
+        if (danhMuc && danhMuc.length > 0) {
+          //console.log("[ChiCho] ✅ DANHMUC lấy từ Context:", danhMuc.length, "mục");
+          danhMuc.forEach(dm => {
+            danhMucMap[String(dm.id)] = dm.group || "Loại khác";
           });
-          //console.log("[ChiCho] loaiMap sau khi group:", loaiMap);
-
-          const filteredLoaiMap = Object.fromEntries(
-            Object.entries(loaiMap).filter(([_, items]) =>
-              !items.some(m => allowedKeywords.some(keyword => m.ten.includes(keyword)))
-            )
-          );
-          //console.log("[ChiCho] filteredLoaiMap sau khi loại keyword:", filteredLoaiMap);
-
-          const sortedLoaiEntries = Object.entries(filteredLoaiMap).sort((a, b) => {
-            const loaiA = a[0].toUpperCase();
-            const loaiB = b[0].toUpperCase();
-            return loaiA.localeCompare(loaiB, undefined, { numeric: true });
-          });
-
-          let sttCounter = 1;
-          const tableData = [];
-          const loaiNames = {
-            L2: "Rau củ, gia vị",
-            L3: "Trái cây + tráng miệng",
-            L4: "Trứng",
-            L5: "Thịt heo",
-            L6: "Thịt bò",
-            L7: "Cá",
-            L8: "Tôm",
-            L9: "Thịt gà",
-            L10: "Cua",
-            L11: "Loại khác"
-          };
-
-          sortedLoaiEntries.forEach(([loai, items]) => {
-            const tongTien = items.reduce((acc, m) => acc + (m.thanhTien || 0), 0);
-            const trich = tongTien * 0.05;
-            const thucNhan = tongTien - trich;
-
-            tableData.push({
-              stt: sttCounter++,
-              dienGiai: loaiNames[loai] || loai,
-              isLoaiRow: true,
-              tongTien,
-              trich,
-              thucNhan
-            });
-
-            items.forEach(m => {
-              tableData.push({
-                stt: "",
-                dienGiai: m.ten,
-                dvt: m.dvt,
-                soLuong: m.soLuong,
-                donGia: m.donGia,
-                thanhTien: m.thanhTien,
-                trich: m.thanhTien ? m.thanhTien * 0.05 : 0,
-                thucNhan: m.thanhTien ? m.thanhTien * 0.95 : 0,
-                isLoaiRow: false
-              });
-            });
-          });
-
-          const tongTien = Object.values(filteredLoaiMap).flat().reduce((acc, m) => acc + (m.thanhTien || 0), 0);
-          const trich = tongTien * 0.05;
-          const thucNhan = tongTien - trich;
-          const tongCongData = { tongTien, trich, thucNhan };
-
-          //console.log("[ChiCho] ✅ Kết quả cuối cùng tableData:", tableData);
-          //console.log("[ChiCho] ✅ Tổng cộng:", tongCongData);
-
-          setData(tableData);
-          setTongCong(tongCongData);
-
-          saveDataToContext(selectedDate, {
-            chiCho: {
-              tableData,
-              tongCong: tongCongData
-            }
-          });
-          //console.log("[ChiCho] 👉 Đã save chiCho vào context");
         } else {
-          console.warn(`[ChiCho] ❌ Không tìm thấy document DATA/${dateStr}`);
+          //console.log("[ChiCho] ⚠ Context DANHMUC trống → Fetch Firestore");
+          const danhMucSnap = await getDocs(collection(db, "DANHMUC"));
+          const fetchedDanhMuc = danhMucSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+          if (fetchedDanhMuc.length > 0) {
+            //console.log("[ChiCho] ✅ Sau khi fetch, DANHMUC từ Firestore:", fetchedDanhMuc.length, "mục");
+            fetchedDanhMuc.forEach(dm => {
+              danhMucMap[String(dm.id)] = dm.group || "Loại khác";
+            });
+            setDanhMuc(fetchedDanhMuc); // ✅ cập nhật context
+          } else {
+            console.warn("[ChiCho] ⚠ Không có danh mục nào được tìm thấy trong Firestore");
+          }
+        }
+
+        // ✅ Ưu tiên lấy từ DataContext nếu có
+        const contextData = dataByDate?.[dateStr];
+        if (contextData?.matHang && contextData?.danhMucMap) {
+          //console.log("[ChiCho] ✅ Dùng matHang + danhMucMap từ DataContext:", dateStr);
+          matHang = contextData.matHang;
+          danhMucMap = contextData.danhMucMap;
+          setProgress(70);
+        } else {
+          //console.log("[ChiCho] ⚠ Không có trong DataContext → Fetch Firestore DATA:", dateStr);
+          const dataSnap = await getDoc(doc(db, "DATA", dateStr));
+          if (dataSnap.exists()) {
+            matHang = dataSnap.data().matHang || [];
+            //console.log("[ChiCho] ✅ Fetch DATA từ Firestore:", matHang.length, "mặt hàng");
+          }
+          setProgress(50);
+          setProgress(70);
+        }
+
+        // Lọc bỏ Xuất kho
+        const keywordsXuatKho = ["đường biên hòa", "gạo", "dầu tường an", "hạt nêm", "nước mắm"];
+        const chiChoItems = matHang.filter(
+          m => !keywordsXuatKho.some(k => m.ten.toLowerCase().includes(k))
+        );
+        //console.log("[ChiCho] ✅ Chi chợ items:", chiChoItems.length);
+
+        if (chiChoItems.length === 0) {
+          //console.log("[ChiCho] ⚠ Không có mặt hàng chi chợ");
           setData([]);
           setTongCong({ tongTien: 0, trich: 0, thucNhan: 0 });
-          saveDataToContext(selectedDate, {
-            chiCho: {
-              tableData: [],
-              tongCong: { tongTien: 0, trich: 0, thucNhan: 0 }
-            }
-          });
+          setProgress(100);
+          setLoading(false);
+          return;
         }
-        setProgress(100);     // 🔹 Hoàn tất
-      } catch (error) {
-        console.error("[ChiCho] ❌ Firestore fetch failed:", error);
+
+        // Gom nhóm theo danh mục
+        const chiChoGroups = {};
+        chiChoItems.forEach(m => {
+          const group = danhMucMap[String(m.maSP)] || "Loại khác";
+          if (!chiChoGroups[group]) chiChoGroups[group] = [];
+          chiChoGroups[group].push(m);
+        });
+        //console.log("[ChiCho] ✅ Gom nhóm chi chợ:", Object.keys(chiChoGroups));
+
+        // Build tableData
+        const tableData = [];
+        let sttCounter = 1;
+        let tongTien = 0;
+        let tongTrich = 0;
+        let tongThucNhan = 0;
+
+        Object.keys(chiChoGroups).forEach(groupName => {
+          const items = chiChoGroups[groupName];
+          const groupTotal = items.reduce((acc, m) => acc + (m.thanhTien || 0), 0);
+          const groupTrich = items.reduce((acc, m) => acc + ((m.thanhTien || 0) * 0.05), 0);
+          const groupThucNhan = items.reduce((acc, m) => acc + ((m.thanhTien || 0) * 0.95), 0);
+
+          tableData.push({
+            stt: sttCounter++,
+            dienGiai: groupName,
+            isLoaiRow: true,
+            thanhTien: groupTotal,
+            trich: groupTrich,
+            thucNhan: groupThucNhan
+          });
+
+          items.forEach(m => {
+            const trich = m.thanhTien ? m.thanhTien * 0.05 : 0;
+            const thucNhan = m.thanhTien ? m.thanhTien * 0.95 : 0;
+
+            tableData.push({
+              stt: "",
+              dienGiai: m.ten,
+              dvt: m.dvt,
+              soLuong: m.soLuong,
+              donGia: m.donGia,
+              thanhTien: m.thanhTien,
+              trich,
+              thucNhan,
+              isLoaiRow: false
+            });
+          });
+
+          tongTien += groupTotal;
+          tongTrich += groupTrich;
+          tongThucNhan += groupThucNhan;
+        });
+
+        //console.log("[ChiCho] ✅ Tổng cộng:", { tongTien, tongTrich, tongThucNhan });
+
+        setTongCong({ tongTien, trich: tongTrich, thucNhan: tongThucNhan });
+        setData(tableData);
+
+        // ✅ Chỉ lưu chiCho (tableData) vào DataContext
+        saveDataToContext(selectedDate, { chiCho: tableData });
+        setProgress(100);
+
+      } catch (err) {
+        console.error("[ChiCho] ❌ Lỗi fetch Chi chợ:", err);
+        setProgress(100);
       } finally {
-        setLoading(false);    // 🔹 Kết thúc loading
+        setLoading(false);
       }
     };
 
-    fetchData();
-  }, [selectedDate]);
-
-
+    fetchChiCho();
+  }, [selectedDate, danhMuc]); // ✅ danhMuc từ context, dùng để trigger khi cập nhật
 
   const headCell = {
     backgroundColor: "#1976d2 !important",

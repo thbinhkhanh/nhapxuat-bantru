@@ -5,9 +5,7 @@ const DataContext = createContext();
 
 // Provider
 export const DataProvider = ({ children }) => {
-  const [dataByDate, setDataByDate] = useState({}); // lưu dữ liệu theo ngày
-
-  //console.log("🔄 [DataProvider] Đã render. Dữ liệu hiện tại theo ngày:", dataByDate);
+  const [dataByDate, setDataByDate] = useState({}); // lưu tất cả theo ngày
 
   return (
     <DataContext.Provider value={{ dataByDate, setDataByDate }}>
@@ -33,12 +31,6 @@ export const useSaveDataToContext = () => {
 
   const { setDataByDate } = context;
 
-  /**
-   * Lưu dữ liệu vào context theo ngày.
-   * Nếu ngày đó đã có dữ liệu, merge với dữ liệu mới (không ghi đè hoàn toàn)
-   * @param {Date} date - ngày cần lưu
-   * @param {object} data - dữ liệu cần lưu
-   */
   const saveDataToContext = (date, data) => {
     if (!(date instanceof Date)) {
       console.error("❌ [saveDataToContext] Tham số 'date' phải là kiểu Date");
@@ -47,21 +39,25 @@ export const useSaveDataToContext = () => {
 
     const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
 
-    // --- Thêm log số lượng học sinh ---
-    if (data.soLuongHocSinh !== undefined) {
-      //console.log(`📊 [Context] Ngày ${dateStr} có số lượng học sinh:`, data.soLuongHocSinh);
-    } else {
-      //console.log(`📊 [Context] Ngày ${dateStr} chưa có số lượng học sinh`);
-    }
-
     setDataByDate(prev => ({
       ...prev,
       [dateStr]: {
-        ...(prev[dateStr] || {}), // giữ lại dữ liệu cũ nếu có
-        ...data,                  // thêm dữ liệu mới
+        ...(prev[dateStr] || {}),
+        ...data, // merge dữ liệu mới (tienAn, danhMucMap, suatAn, v.v.)
       },
     }));
   };
 
   return saveDataToContext;
+};
+
+// Custom hook để lấy dữ liệu theo ngày
+export const useGetDataByDate = (date) => {
+  const context = useDataContext();
+  if (!context || !(date instanceof Date)) return null;
+
+  const { dataByDate } = context;
+  const dateStr = date.toISOString().split("T")[0];
+
+  return dataByDate[dateStr] || null;
 };

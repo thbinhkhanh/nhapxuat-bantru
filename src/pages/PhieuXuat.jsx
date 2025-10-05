@@ -21,6 +21,7 @@ import { exportPhieuXuatKho } from "../utils/exportPhieuXuatKho";
 import UpdateIcon from "@mui/icons-material/Update";         
 import FileDownloadIcon from "@mui/icons-material/FileDownload"; 
 import SyncIcon from '@mui/icons-material/Sync';
+import { useInfo } from "../context/InfoContext";
 
 // Firestore mặc định
 const firebaseConfig = {
@@ -44,6 +45,7 @@ const firebaseConfigSync = {
   messagingSenderId: "639395884521",
   appId: "1:639395884521:web:ed052133d1c9ef8d1d6f78"
 };
+
 const appSync = getApps().some(a => a.name === "syncApp") 
   ? getApp("syncApp") 
   : initializeApp(firebaseConfigSync, "syncApp");
@@ -76,6 +78,10 @@ export default function PhieuXuat() {
 
   const [totalText, setTotalText] = useState("");
 
+  // Context INFO
+  const { infoByDate, saveInfoToContext } = useInfo();
+
+
   const inputWidth = 200;
 
   const nguoiKy = [
@@ -86,55 +92,65 @@ export default function PhieuXuat() {
   ];
 
   const handleSync = async () => {
-    if (!selectedDate) {
-      setMessage("Chọn ngày trước khi đồng bộ");
+  if (!selectedDate) {
+    setMessage("Chọn ngày trước khi đồng bộ");
+    setSuccess(false);
+    setShowAlert(true);
+    setTimeout(() => setShowAlert(false), 4000);
+    return;
+  }
+
+  try {
+    const dateStr = selectedDate.toISOString().split("T")[0];
+    const docRef = doc(dbSync, "BANTRU_2025-2026", dateStr);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      const day = selectedDate.getDate().toString().padStart(2, "0");
+      const month = (selectedDate.getMonth() + 1).toString().padStart(2, "0");
+      setMessage(`Không tìm thấy số lượng học sinh bán trú ngày ${day}/${month}`);
       setSuccess(false);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 4000);
       return;
     }
 
-    try {
-      const docRef = doc(dbSync, "BANTRU_2024-2025", selectedDate.toISOString().split("T")[0]);
-      const docSnap = await getDoc(docRef);
+    const danhSachAn = docSnap.data().danhSachAn || [];
+    const soLuong = danhSachAn.length;
 
-      if (!docSnap.exists()) {
-        const day = selectedDate.getDate().toString().padStart(2, "0");
-        const month = (selectedDate.getMonth() + 1).toString().padStart(2, "0");
-        const year = selectedDate.getFullYear();
-        setMessage(`Không tìm thấy số lượng học sinh bán trú ngày ${day}/${month}/${year}`);
-        setSuccess(false);
-        setShowAlert(true);
-        setTimeout(() => setShowAlert(false), 4000);
-        return;
-      }
-
-      const danhSachAn = docSnap.data().danhSachAn || [];
-      const soLuong = danhSachAn.length;
-
+    if (soLuong > 0) {
+      // 1️⃣ Lưu vào state local
       setSoLuongHocSinh(soLuong);
-      saveDataToContext(selectedDate, { soLuongHocSinh: soLuong });
 
-      const docId = format(selectedDate, "yyyy-MM-dd");
+      // 2️⃣ Lưu vào InfoContext dưới dạng { [date]: soLuong }
+      const existingInfo = infoByDate?.[dateStr] || {};
+      saveInfoToContext(selectedDate, {
+        ...existingInfo,
+        suatAn: soLuong,
+        updatedAt: new Date().toISOString(),
+      });
+
+      // 3️⃣ Cập nhật Firestore INFO
       await setDoc(
-        doc(db, "INFO", docId),
+        doc(db, "INFO", dateStr),
         { suatAn: soLuong, updatedAt: new Date().toISOString() },
         { merge: true }
       );
 
-      //setMessage(`✅ Đã đồng bộ số lượng học sinh với dữ liệu bán trú: ${soLuong}`);
       setMessage(`✅ Đã đồng bộ số lượng học sinh với dữ liệu bán trú.`);
       setSuccess(true);
       setShowAlert(true);
       setTimeout(() => setShowAlert(false), 4000);
-    } catch (error) {
-      console.error("Lỗi khi đồng bộ:", error);
-      setMessage("❌ Lỗi khi đồng bộ dữ liệu");
-      setSuccess(false);
-      setShowAlert(true);
-      setTimeout(() => setShowAlert(false), 4000);
     }
-  };
+  } catch (error) {
+    console.error("Lỗi khi đồng bộ:", error);
+    setMessage("❌ Lỗi khi đồng bộ dữ liệu");
+    setSuccess(false);
+    setShowAlert(true);
+    setTimeout(() => setShowAlert(false), 4000);
+  }
+};
+
 
   // Cập nhật Firestore với số lượng học sinh truyền vào
   const UpdateSoLuongHS = async (soLuong) => {
@@ -179,65 +195,90 @@ export default function PhieuXuat() {
 
   // Hàm fetchRows dùng context
   const fetchData = async (date) => {
+    if (!date) return;
     setLoading(true);
+
+    const dateStr = date.toISOString().split("T")[0];
+
     try {
-      const dateStr = date.toISOString().split("T")[0];
-
-      const dataRef = doc(db, "DATA", dateStr);
-      const dataSnap = await getDoc(dataRef);
-
+      // 1️⃣ Lấy data từ DataContext
+      const contextData = dataByDate?.[dateStr];
       let formattedRows = [];
-      if (dataSnap.exists()) {
-        const docData = dataSnap.data();
-        const matHang = Array.isArray(docData.matHang) ? docData.matHang : [];
 
-        const allowedKeywords = ["Đường cát", "Gạo", "Dầu ăn", "Hạt nêm", "Nước mắm"];
-        const filteredData = matHang.filter(item =>
-          allowedKeywords.some(keyword => item.ten.includes(keyword))
-        );
+      // 2️⃣ Lấy info từ InfoContext nếu có
+      let infoData = infoByDate?.[dateStr];
 
-        formattedRows = filteredData.map((item, index) => ({
-          stt: index + 1,
-          name: item.ten,
-          unit: item.dvt,
-          yeuCau: item.soLuong,
-          thucXuat: item.thucXuat !== undefined ? item.thucXuat : item.soLuong,
-          donGia: item.donGia,
-          thanhTien: item.thanhTien,
-        }));
-
-        setRows(formattedRows);
-        saveDataToContext(date, { ...docData, phieuXuat: formattedRows });
+      // 3️⃣ Xử lý DataContext
+      if (contextData?.matHang && contextData?.phieuXuat) {
+        formattedRows = contextData.phieuXuat;
+        //console.log("✅ Sử dụng dữ liệu từ DataContext:", dateStr);
       } else {
-        setRows([]);
-        saveDataToContext(date, { phieuXuat: [] });
+        // Fetch DATA từ Firestore nếu chưa có trong DataContext
+        const dataSnap = await getDoc(doc(db, "DATA", dateStr));
+        if (dataSnap.exists()) {
+          const docData = dataSnap.data();
+          const matHang = Array.isArray(docData.matHang) ? docData.matHang : [];
+
+          const allowedKeywords = ["Đường Biên Hòa", "Gạo", "Dầu Tường An", "Hạt nêm", "Nước mắm"];
+          const filteredData = matHang.filter(item =>
+            allowedKeywords.some(keyword => item.ten.includes(keyword))
+          );
+
+          formattedRows = filteredData.map((item, index) => ({
+            stt: index + 1,
+            name: item.ten,
+            unit: item.dvt,
+            yeuCau: item.soLuong,
+            thucXuat: item.thucXuat !== undefined ? item.thucXuat : item.soLuong,
+            donGia: item.donGia,
+            thanhTien: item.thanhTien,
+          }));
+
+          // Lưu vào DataContext
+          saveDataToContext(date, { ...docData, phieuXuat: formattedRows });
+        } else {
+          formattedRows = [];
+          saveDataToContext(date, { phieuXuat: [] });
+        }
       }
 
-      const infoRef = doc(db, "INFO", dateStr);
-      const infoSnap = await getDoc(infoRef);
-
-      if (infoSnap.exists()) {
-        const infoData = infoSnap.data();
-        //console.log("✅ INFO data:", infoData);
-
-        setSoPhieu(infoData.soPhieu || "02/01");
-        setNguoiNhan(infoData.nguoiNhan || "Đặng Thị Tuyết Nga");
-        setLyDoXuat(infoData.lyDo || "Chế biến thực phẩm cho trẻ");
-        setXuatTaiKho(infoData.xuatTai || "Tiểu học Bình Khánh");
-        setSoLuongHocSinh(infoData.suatAn || 0);
-        setThuKho(infoData.thuKho || "Nguyễn Văn Tám");
-        setKeToan(infoData.keToan || "Lê Thị Thu Hương");
-        setHieuTruong(infoData.hieuTruong || "Đặng Thái Bình");
-      } else {
-        console.warn("⚠️ Không tìm thấy INFO cho ngày:", dateStr);
-        resetInfoToDefault();
+      // 4️⃣ Xử lý InfoContext nếu chưa có
+      if (!infoData) {
+        const infoSnap = await getDoc(doc(db, "INFO", dateStr));
+        if (infoSnap.exists()) {
+          infoData = infoSnap.data();
+          saveInfoToContext(date, infoData); // Hàm lưu info vào InfoContext
+          //console.log("✅ Lấy dữ liệu Info từ Firestore:", dateStr);
+        } else {
+          infoData = {};
+        }
       }
+
+      // 5️⃣ Set state từ infoData hoặc mặc định
+      setRows(formattedRows);
+      setSoPhieu(infoData.soPhieu || "02/01");
+      setNguoiNhan(infoData.nguoiNhan || "Đặng Thị Tuyết Nga");
+      setLyDoXuat(infoData.lyDo || "Chế biến thực phẩm cho trẻ");
+      setXuatTaiKho(infoData.xuatTai || "Tiểu học Bình Khánh");
+
+      // Số lượng học sinh ưu tiên từ context hoặc Firestore, mặc định 0
+      setSoLuongHocSinh(infoData.suatAn !== undefined ? infoData.suatAn : 0);
+
+      setThuKho(infoData.thuKho || "Nguyễn Văn Tám");
+      setKeToan(infoData.keToan || "Lê Thị Thu Hương");
+      setHieuTruong(infoData.hieuTruong || "Đặng Thái Bình");
+
     } catch (err) {
       console.error("[PhieuXuat] Lỗi khi fetch dữ liệu:", err);
       setRows([]);
+      resetInfoToDefault();
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
+
+
 
   useEffect(() => {
     fetchData(selectedDate);
@@ -331,18 +372,34 @@ export default function PhieuXuat() {
       setLoadingSave(false);
     }
   };
+  //const allowedKeywords = ["Đường Biên Hòa", "Gạo", "Dầu Tường An", "Hạt nêm", "Nước mắm"];
+  const keywordOrder = [
+      "Gạo", 
+      "Đường Biên Hòa", 
+      "Dầu Tường An", 
+      "Nước mắm", 
+      "Hạt nêm"
+    ];
 
-  const keywordOrder = ["gạo", "đường", "dầu ăn", "nước mắm", "hạt nêm" ];
   const sortedRows = [...rows]
-  .sort((a, b) => {
-    const aIndex = keywordOrder.findIndex(keyword => a.name.toLowerCase().includes(keyword));
-    const bIndex = keywordOrder.findIndex(keyword => b.name.toLowerCase().includes(keyword));
-    return aIndex - bIndex;
-  })
-  .map((item, index) => ({
-    ...item,
-    stt: index + 1,
-  }));
+    .sort((a, b) => {
+      const aIndex = keywordOrder.findIndex(keyword =>
+        a.name.toLowerCase().includes(keyword.toLowerCase())
+      );
+      const bIndex = keywordOrder.findIndex(keyword =>
+        b.name.toLowerCase().includes(keyword.toLowerCase())
+      );
+
+      // Nếu không khớp, đặt cuối bảng
+      const aPos = aIndex === -1 ? 999 : aIndex;
+      const bPos = bIndex === -1 ? 999 : bIndex;
+
+      return aPos - bPos;
+    })
+    .map((item, index) => ({
+      ...item,
+      stt: index + 1,
+    }));
 
   return (
     <Box sx={{ pt: "20px", pb: 6, px: { xs: 1, sm: 2 }, bgcolor: "#e3f2fd", minHeight: "100vh" }}>
@@ -486,7 +543,7 @@ export default function PhieuXuat() {
             )}
           </Box>
 
-          {loading && (
+          {/*{loading && (
             <Box sx={{ 
               width: "100%", 
               maxWidth: 300, 
@@ -511,7 +568,7 @@ export default function PhieuXuat() {
                 Đang tải dữ liệu... ({progress}%)
               </Typography>
             </Box>
-          )}
+          )}*/}
 
 
           <Box sx={{ borderBottom: "3px solid #1976d2", width: "100%", mt: 0 }} />
