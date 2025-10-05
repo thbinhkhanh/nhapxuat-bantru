@@ -45,7 +45,7 @@ function AppContent() {
     { path: '/chicho', label: 'Chi chợ' },
     { path: '/tienan', label: 'Tiền ăn' },
     { path: '/nhapphieu', label: 'Nhập phiếu' },
-    { path: '/danhmuc', label: 'Danh mục' },
+    //{ path: '/danhmuc', label: 'Danh mục' },
     { path: '/capnhat', label: 'Cập nhật' },
     { path: '/phanloai', label: 'Phân loại' },
   ];
@@ -157,7 +157,7 @@ function AppContent() {
             element={<ImportDataWithRedirect />}
           />
 
-          <Route path="/danhmuc" element={<ImportDanhMuc onBack={() => window.history.back()} />} />
+          {/*<Route path="/danhmuc" element={<ImportDanhMuc onBack={() => window.history.back()} />} />*/}
           <Route path="/capnhat" element={<UpdateData />} />
           <Route path="/phanloai" element={<UpdateType />} />
         </Routes>
