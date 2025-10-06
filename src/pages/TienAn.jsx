@@ -380,25 +380,25 @@ const fetchData = async () => {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow sx={{ minHeight: 35 }}>
-                  <TableCell align="center" sx={headCell}>STT</TableCell>
-                  <TableCell align="center" sx={headCell}>Nội dung</TableCell>
-                  <TableCell align="center" sx={headCell}>ĐVT</TableCell>
-                  <TableCell align="center" sx={headCell}>Số lượng</TableCell>
-                  <TableCell align="center" sx={headCell}>Đơn giá</TableCell>
-                  <TableCell align="center" sx={{ ...headCell, borderRight: 0 }}>Thành tiền</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>STT</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Nội dung</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>ĐVT</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Số lượng</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Đơn giá</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, borderRight: 0, whiteSpace: "nowrap" }}>Thành tiền</TableCell>
                 </TableRow>
               </TableHead>
+
               <TableBody>
                 {data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      Không có dữ liệu
-                    </TableCell>
+                    <TableCell colSpan={6} align="center">Không có dữ liệu</TableCell>
                   </TableRow>
                 ) : (
                   data.map((item, index) => {
                     const isSpecialRow =
-                      ["Chênh lệch đầu ngày","Xuất ăn và tiêu chuẩn trong ngày","Được chi trong ngày","Đã chi trong ngày","Xuất kho","Chi chợ","Chênh lệch cuối ngày"].includes(item.dienGiai);
+                      ["Chênh lệch đầu ngày", "Xuất ăn và tiêu chuẩn trong ngày", "Được chi trong ngày", "Đã chi trong ngày", "Xuất kho", "Chi chợ", "Chênh lệch cuối ngày"]
+                        .includes(item.dienGiai);
 
                     return (
                       <TableRow
@@ -411,7 +411,7 @@ const fetchData = async () => {
                               ? "#ffe0b2"
                               : item.isLoaiRow
                               ? "#f5f5f5"
-                              : undefined
+                              : undefined,
                         }}
                       >
                         <TableCell
@@ -421,19 +421,27 @@ const fetchData = async () => {
                             px: 1,
                             fontWeight: item.isLoaiRow ? "bold" : "normal",
                             color: isSpecialRow ? "#1976d2" : undefined,
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {item.stt}
                         </TableCell>
 
+                        {/* Cột NỘI DUNG – không xuống dòng, rút gọn, hiển thị tooltip khi hover */}
                         <TableCell
                           sx={{
                             py: 0.5,
                             px: 1,
                             fontWeight: item.isLoaiRow ? "bold" : "normal",
                             color: isSpecialRow ? "#1976d2" : undefined,
-                            fontSize: '0.85rem'
+                            fontSize: "0.85rem",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: 250,
+                            "@media (max-width:600px)": { maxWidth: 150 },
                           }}
+                          title={item.dienGiai}
                         >
                           {item.dienGiai}
                         </TableCell>
@@ -445,21 +453,22 @@ const fetchData = async () => {
                             px: 1,
                             fontWeight: item.isLoaiRow ? "bold" : "normal",
                             color: isSpecialRow ? "#1976d2" : undefined,
-                            fontSize: '0.85rem'
+                            fontSize: "0.85rem",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {item.dvt || ""}
                         </TableCell>
 
-                        <TableCell align="center" sx={{ py: 0.5, px: 1 }}>
-                          {(item.dienGiai === "Xuất ăn và tiêu chuẩn trong ngày") ? (
+                        <TableCell align="center" sx={{ py: 0.5, px: 1, whiteSpace: "nowrap" }}>
+                          {item.dienGiai === "Xuất ăn và tiêu chuẩn trong ngày" ? (
                             <TextField
                               size="small"
                               type="number"
                               value={item.soLuong || ""}
                               InputProps={{
-                                readOnly: true,          // Chỉ hiển thị, không cho nhập
-                                disableUnderline: true,  // Bỏ gạch dưới nếu dùng variant="standard"
+                                readOnly: true,
+                                disableUnderline: true,
                               }}
                               inputProps={{
                                 style: {
@@ -467,22 +476,21 @@ const fetchData = async () => {
                                   padding: "0 8px",
                                   fontSize: "0.85rem",
                                   height: 23,
-                                  fontWeight: 'bold',
+                                  fontWeight: "bold",
                                   color: "#1976d2",
-                                  border: "none",        // Bỏ border ngoài
-                                  backgroundColor: "transparent"
+                                  border: "none",
+                                  backgroundColor: "transparent",
                                 },
                               }}
-                              variant="standard"          // hoặc "outlined" nếu muốn style khác
+                              variant="standard"
                               sx={{ width: 100 }}
                             />
-
                           ) : (
                             item.soLuong || ""
                           )}
                         </TableCell>
 
-                        <TableCell align="right" sx={{ py: 0.5, px: 1, fontSize: '0.85rem' }}>
+                        <TableCell align="right" sx={{ py: 0.5, px: 1, fontSize: "0.85rem", whiteSpace: "nowrap" }}>
                           {item.donGia ? item.donGia.toLocaleString() : ""}
                         </TableCell>
 
@@ -492,8 +500,9 @@ const fetchData = async () => {
                             py: 0.5,
                             px: 1,
                             fontWeight: item.isLoaiRow ? "bold" : "normal",
-                            fontSize: '0.85rem',
-                            color: isSpecialRow ? "#1976d2" : undefined
+                            fontSize: "0.85rem",
+                            color: isSpecialRow ? "#1976d2" : undefined,
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {item.dienGiai === "Chênh lệch đầu ngày" ? (
@@ -519,7 +528,7 @@ const fetchData = async () => {
                                   fontSize: "0.85rem",
                                   height: 23,
                                   fontWeight: "bold",
-                                  color: "red", // đổi sang màu đỏ
+                                  color: "red",
                                 },
                               }}
                               sx={{ width: 100 }}
@@ -537,6 +546,7 @@ const fetchData = async () => {
               </TableBody>
             </Table>
           </TableContainer>
+
 
           {/* Ký tên */}
           <Box sx={{ mt: 4, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", textAlign: "center", gap: 2 }}>

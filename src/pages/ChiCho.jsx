@@ -278,17 +278,18 @@ export default function ChiCho() {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center" sx={headCell}>STT</TableCell>
-                  <TableCell align="center" sx={headCell}>Diễn giải</TableCell>
-                  <TableCell align="center" sx={headCell}>ĐVT</TableCell>
-                  <TableCell align="center" sx={headCell}>Số lượng</TableCell>
-                  <TableCell align="center" sx={headCell}>Đơn giá</TableCell>
-                  <TableCell align="center" sx={headCell}>Thành tiền</TableCell>
-                  <TableCell align="center" sx={headCell}>Trích 5%</TableCell>
-                  <TableCell align="center" sx={headCell}>Thực nhận</TableCell>
-                  <TableCell align="center" sx={{ ...headCell, borderRight: 0 }}>Ghi chú</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>STT</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Diễn giải</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>ĐVT</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Số lượng</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Đơn giá</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Thành tiền</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Trích 5%</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Thực nhận</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, borderRight: 0, whiteSpace: "nowrap" }}>Ghi chú</TableCell>
                 </TableRow>
               </TableHead>
+
               <TableBody>
                 {data.map((row, idx) => (
                   <TableRow
@@ -296,49 +297,90 @@ export default function ChiCho() {
                     sx={{ backgroundColor: row.isLoaiRow ? "#d9e1f2" : "transparent" }}
                     hover={!row.isLoaiRow}
                   >
-                    <TableCell align="center" sx={{ fontWeight: row.isLoaiRow ? 600 : "normal" }}>
+                    <TableCell
+                      align="center"
+                      sx={{
+                        fontWeight: row.isLoaiRow ? 600 : "normal",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {row.stt}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: row.isLoaiRow ? 600 : "normal" }}>
+
+                    {/* Cột “Diễn giải” – không xuống dòng, rút gọn khi quá dài */}
+                    <TableCell
+                      sx={{
+                        fontWeight: row.isLoaiRow ? 600 : "normal",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        maxWidth: 250,
+                        "@media (max-width:600px)": { maxWidth: 140 },
+                      }}
+                      title={row.dienGiai} // 👈 hiển thị tooltip khi hover
+                    >
                       {row.dienGiai}
                     </TableCell>
-                    <TableCell align="center">{row.dvt || ""}</TableCell>
-                    <TableCell align="center">{row.soLuong || ""}</TableCell>
-                    <TableCell align="right">{row.donGia?.toLocaleString() || ""}</TableCell>
-                    <TableCell align="right">{row.thanhTien?.toLocaleString() || ""}</TableCell>
 
-                    {/* Cột Trích 5% in đậm nếu là dòng loại */}
+                    <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                      {row.dvt || ""}
+                    </TableCell>
+                    <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                      {row.soLuong || ""}
+                    </TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                      {row.donGia?.toLocaleString() || ""}
+                    </TableCell>
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                      {row.thanhTien?.toLocaleString() || ""}
+                    </TableCell>
+
+                    {/* Cột Trích 5% */}
                     <TableCell
                       align="right"
-                      sx={{ fontWeight: row.isLoaiRow ? 700 : "normal" }}
+                      sx={{
+                        fontWeight: row.isLoaiRow ? 700 : "normal",
+                        whiteSpace: "nowrap",
+                      }}
                     >
                       {row.trich?.toLocaleString() || ""}
                     </TableCell>
 
-                    {/* Cột Thực nhận in đậm nếu là dòng loại */}
+                    {/* Cột Thực nhận */}
                     <TableCell
                       align="right"
-                      sx={{ fontWeight: row.isLoaiRow ? 700 : "normal" }}
+                      sx={{
+                        fontWeight: row.isLoaiRow ? 700 : "normal",
+                        whiteSpace: "nowrap",
+                      }}
                     >
                       {row.thucNhan?.toLocaleString() || ""}
                     </TableCell>
 
-                    <TableCell></TableCell>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}></TableCell>
                   </TableRow>
                 ))}
 
                 {/* Hàng cộng */}
                 <TableRow sx={{ backgroundColor: "#ffe0b2" }}>
-                  <TableCell colSpan={5} align="center" sx={{ fontWeight: 700 }}>CỘNG</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>{tongCong.tongTien.toLocaleString()}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>{tongCong.trich.toLocaleString()}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>{tongCong.thucNhan.toLocaleString()}</TableCell>
-                  <TableCell></TableCell>
+                  <TableCell colSpan={5} align="center" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                    CỘNG
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                    {tongCong.tongTien.toLocaleString()}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                    {tongCong.trich.toLocaleString()}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                    {tongCong.thucNhan.toLocaleString()}
+                  </TableCell>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}></TableCell>
                 </TableRow>
               </TableBody>
-
             </Table>
           </TableContainer>
+
 
           {/* Ký tên */}
           <Box sx={{ mt: 4 }}>

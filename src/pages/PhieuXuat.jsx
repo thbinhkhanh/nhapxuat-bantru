@@ -712,23 +712,29 @@ export default function PhieuXuat() {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow sx={{ minHeight: 35 }}>
-                  <TableCell align="center" sx={headCell}>Số TT</TableCell>
-                  <TableCell align="center" sx={headCell}>Tên thực phẩm</TableCell>
-                  <TableCell align="center" sx={headCell}>Đơn vị tính</TableCell>
-                  <TableCell align="center" sx={headCell}>Số lượng Yêu cầu</TableCell>
-                  <TableCell align="center" sx={headCell}>Số lượng Thực xuất</TableCell>
-                  <TableCell align="center" sx={headCell}>Đơn giá</TableCell>
-                  <TableCell align="center" sx={{ ...headCell, borderRight: 0 }}>Thành tiền</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Số TT</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Tên thực phẩm</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Đơn vị tính</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Số lượng Yêu cầu</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Số lượng Thực xuất</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, whiteSpace: "nowrap" }}>Đơn giá</TableCell>
+                  <TableCell align="center" sx={{ ...headCell, borderRight: 0, whiteSpace: "nowrap" }}>Thành tiền</TableCell>
                 </TableRow>
               </TableHead>
 
               <TableBody>
                 {sortedRows.map((row, index) => (
                   <TableRow key={row.stt} hover sx={{ minHeight: 35 }}>
-                    <TableCell align="center">{row.stt}</TableCell>
-                    <TableCell sx={{ fontSize: '0.85rem' }}>{row.name}</TableCell>
-                    <TableCell align="center">{row.unit}</TableCell>
-                    <TableCell align="center">{row.yeuCau}</TableCell>
+                    <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.stt}</TableCell>
+
+                    {/* Cột 2: Tên thực phẩm — luôn 1 dòng */}
+                    <TableCell sx={{ fontSize: '0.85rem', whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden", maxWidth: 220 }}>
+                      {row.name}
+                    </TableCell>
+
+                    <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.unit}</TableCell>
+                    <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>{row.yeuCau}</TableCell>
+
                     <TableCell align="center">
                       <TextField
                         size="small"
@@ -736,7 +742,6 @@ export default function PhieuXuat() {
                         value={row.thucXuat}
                         onChange={(e) => {
                           const newThucXuat = Number(e.target.value);
-
                           const newRows = rows.map((r) => {
                             if (r.name === row.name) {
                               const thanhTien = newThucXuat * r.donGia;
@@ -744,15 +749,8 @@ export default function PhieuXuat() {
                             }
                             return r;
                           });
-
                           setRows(newRows);
                           saveDataToContext(selectedDate, newRows);
-
-                          const newTotal = newRows.reduce((sum, r) => sum + r.thanhTien, 0);
-                          const newTotalText = numberToVietnameseText(newTotal);
-
-                          //console.log("Tổng tiền:", newTotal);
-                          //console.log("Bằng chữ:", newTotalText);
                         }}
                         inputProps={{
                           min: 0,
@@ -765,24 +763,28 @@ export default function PhieuXuat() {
                         sx={{
                           width: 150,
                           "@media (max-width:600px)": {
-                            width: "75px", // 👈 giảm 50% khi màn hình nhỏ
+                            width: "75px",
                           },
                         }}
                       />
                     </TableCell>
-                    <TableCell align="right">{row.donGia.toLocaleString()}</TableCell>
-                    <TableCell align="right">
+
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                      {row.donGia.toLocaleString()}
+                    </TableCell>
+
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                       {typeof row.thanhTien === "number" ? row.thanhTien.toLocaleString() : ""}
                     </TableCell>
                   </TableRow>
                 ))}
 
                 <TableRow sx={{ backgroundColor: "#ffe0b2" }}>
-                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 'bold' }}>Tổng cộng</TableCell>
+                  <TableCell colSpan={3} align="center" sx={{ fontWeight: 'bold', whiteSpace: "nowrap" }}>Tổng cộng</TableCell>
                   <TableCell />
                   <TableCell />
                   <TableCell />
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                  <TableCell align="right" sx={{ fontWeight: 'bold', whiteSpace: "nowrap" }}>
                     {total.toLocaleString()}
                   </TableCell>
                 </TableRow>
